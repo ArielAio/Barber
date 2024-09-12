@@ -132,78 +132,86 @@ function Agendamentos() {
                             </button>
                         </div>
                     </div>
-                    <ul>
-                        {currentClientes.map((cliente, index) => (
-                            <li key={index} className="mb-4 p-2 bg-gray-800 rounded-lg flex justify-between items-center">
-                                <div>
-                                    <p><strong>Nome:</strong> {cliente.nome}</p>
-                                    <p><strong>Email:</strong> {cliente.email}</p>
-                                    <p><strong>Data:</strong> {cliente.dataAgendamento}</p>
-                                    <p><strong>Hora:</strong> {cliente.horaAgendamento}</p>
-                                </div>
 
-                                <div className="flex items-center space-x-2">
-                                    {/* Botão de Status de Pagamento */}
-                                    <button
-                                        className={`px-4 py-2 rounded-full font-bold ${cliente.statusPagamento === 'Pendente' ? 'bg-red-500' : 'bg-green-500'}`}
-                                        onClick={() => toggleStatusList(cliente)}
-                                    >
-                                        {cliente.statusPagamento === 'Pendente' ? (
-                                            <MdCancel size={24} />
-                                        ) : (
-                                            <MdCheck size={24} />
+                    {/* Mensagem se não houver clientes */}
+                    {clientesPendentes.length === 0 ? (
+                        <p className="text-center text-gray-400">Nenhum agendamento cadastrado.</p>
+                    ) : (
+                        <ul>
+                            {currentClientes.map((cliente, index) => (
+                                <li key={index} className="mb-4 p-2 bg-gray-800 rounded-lg flex justify-between items-center">
+                                    <div>
+                                        <p><strong>Nome:</strong> {cliente.nome}</p>
+                                        <p><strong>Email:</strong> {cliente.email}</p>
+                                        <p><strong>Data:</strong> {cliente.dataAgendamento}</p>
+                                        <p><strong>Hora:</strong> {cliente.horaAgendamento}</p>
+                                    </div>
+
+                                    <div className="flex items-center space-x-2">
+                                        {/* Botão de Status de Pagamento */}
+                                        <button
+                                            className={`px-4 py-2 rounded-full font-bold ${cliente.statusPagamento === 'Pendente' ? 'bg-red-500' : 'bg-green-500'}`}
+                                            onClick={() => toggleStatusList(cliente)}
+                                        >
+                                            {cliente.statusPagamento === 'Pendente' ? (
+                                                <MdCancel size={24} />
+                                            ) : (
+                                                <MdCheck size={24} />
+                                            )}
+                                        </button>
+
+                                        {/* Mostra opções de status quando o cliente é clicado */}
+                                        {selectedCliente && selectedCliente.id === cliente.id && (
+                                            <div className="mt-2 bg-gray-700 p-2 rounded-lg">
+                                                <p onClick={() => handleStatusChange(cliente, 'Pendente')} className="cursor-pointer hover:bg-gray-600 p-2 flex items-center space-x-2">
+                                                    <MdCancel size={20} />
+                                                    <span>Pendente</span>
+                                                </p>
+                                                <p onClick={() => handleStatusChange(cliente, 'Pago')} className="cursor-pointer hover:bg-gray-600 p-2 flex items-center space-x-2">
+                                                    <MdCheck size={20} />
+                                                    <span>Pago</span>
+                                                </p>
+                                            </div>
                                         )}
-                                    </button>
 
-                                    {/* Mostra opções de status quando o cliente é clicado */}
-                                    {selectedCliente && selectedCliente.id === cliente.id && (
-                                        <div className="mt-2 bg-gray-700 p-2 rounded-lg">
-                                            <p onClick={() => handleStatusChange(cliente, 'Pendente')} className="cursor-pointer hover:bg-gray-600 p-2 flex items-center space-x-2">
-                                                <MdCancel size={20} />
-                                                <span>Pendente</span>
-                                            </p>
-                                            <p onClick={() => handleStatusChange(cliente, 'Pago')} className="cursor-pointer hover:bg-gray-600 p-2 flex items-center space-x-2">
-                                                <MdCheck size={20} />
-                                                <span>Pago</span>
-                                            </p>
-                                        </div>
-                                    )}
+                                        {/* Botão de Edição */}
+                                        <button
+                                            onClick={() => handleEdit(cliente)}
+                                            className="ml-4 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-full flex items-center space-x-2"
+                                        >
+                                            <MdEdit size={20} />
+                                        </button>
 
-                                    {/* Botão de Edição */}
-                                    <button
-                                        onClick={() => handleEdit(cliente)}
-                                        className="ml-4 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-full flex items-center space-x-2"
-                                    >
-                                        <MdEdit size={20} />
-                                    </button>
+                                        {/* Botão de Exclusão */}
+                                        <button
+                                            onClick={() => handleDelete(cliente)}
+                                            className="ml-4 px-4 py-2 bg-red-500 hover:bg-red-700 text-white font-bold rounded-full flex items-center space-x-2"
+                                        >
+                                            <MdDelete size={20} />
+                                        </button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
 
-                                    {/* Botão de Exclusão */}
-                                    <button
-                                        onClick={() => handleDelete(cliente)}
-                                        className="ml-4 px-4 py-2 bg-red-500 hover:bg-red-700 text-white font-bold rounded-full flex items-center space-x-2"
-                                    >
-                                        <MdDelete size={20} />
-                                    </button>
-                                </div>
+                {/* Controles de Navegação */}
+                <div className="mt-4">
+                    <ul className="flex justify-center space-x-2">
+                        {pageNumbers.map(number => (
+                            <li key={number}>
+                                <button
+                                    onClick={() => paginate(number)}
+                                    className={`px-4 py-2 rounded-full ${currentPage === number ? 'bg-blue-500' : 'bg-gray-700'} hover:bg-blue-700 text-white font-bold`}
+                                >
+                                    {number}
+                                </button>
                             </li>
                         ))}
                     </ul>
                 </div>
 
-                {/* Controles de Navegação */}
-                <div className="w-full max-w-screen-sm p-4 bg-gray-900 rounded-lg shadow-lg flex justify-center space-x-2">
-                    {pageNumbers.map(number => (
-                        <button
-                            key={number}
-                            onClick={() => paginate(number)}
-                            className={`px-4 py-2 rounded-full ${currentPage === number ? 'bg-blue-500' : 'bg-gray-700'} hover:bg-blue-700 text-white font-bold`}
-                        >
-                            {number}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Calendário */}
                 <div className="w-full max-w-screen-sm p-4 bg-gray-900 rounded-lg shadow-lg">
                     <Calendario />
                 </div>
