@@ -5,7 +5,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import 'moment/locale/pt-br';
 import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import app from '../lib/firebase';
-import Modal from '../components/Modal';
+import Modal from './Modal';
 
 const localizer = momentLocalizer(moment);
 
