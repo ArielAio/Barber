@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, updateDoc, doc, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
 import app from '../lib/firebase';
 import { useRouter } from 'next/router';
 import moment from 'moment-timezone';
@@ -15,11 +15,10 @@ function Agendamentos() {
     const [selectedCliente, setSelectedCliente] = useState(null);
     const [statusFilter, setStatusFilter] = useState('Todos');
     const [searchTerm, setSearchTerm] = useState(''); // Estado para armazenar o texto da pesquisa
-    const [loading, setLoading] = useState(true); // Estado de carregamento
+    const [loading, setLoading] = useState(true);
     const router = useRouter();
 
     const fetchClientesPendentes = async () => {
-        // setLoading(true); // Inicie o carregamento
         const db = getFirestore(app);
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         let clientesData = agendamentosSnapshot.docs.map(doc => {
@@ -61,12 +60,48 @@ function Agendamentos() {
     const handleStatusChange = async (cliente, novoStatus) => {
         const db = getFirestore(app);
         const clienteRef = doc(db, 'agendamentos', cliente.id);
+
+        // Atualize o status do cliente
         await updateDoc(clienteRef, {
             statusPagamento: novoStatus
         });
+
+        // Atualize o total financeiro com base na mudança de status
+        const financeiroRef = doc(db, 'financeiro', 'total');
+        const financeiroSnapshot = await getDoc(financeiroRef);
+
+        // Se o status foi alterado para "Pago"
+        if (novoStatus === 'Pago' && cliente.statusPagamento !== 'Pago') {
+            if (financeiroSnapshot.exists()) {
+                const totalAtual = financeiroSnapshot.data().total || 0;
+                const valorCliente = cliente.valor || 30;  // Substitua 30 pelo valor padrão se não estiver definido
+                await updateDoc(financeiroRef, {
+                    total: totalAtual + valorCliente
+                });
+            } else {
+                // Se o documento não existir, crie-o com o valor inicial do cliente
+                const valorCliente = cliente.valor || 30;  // Substitua 30 pelo valor padrão se não estiver definido
+                await setDoc(financeiroRef, {
+                    total: valorCliente
+                });
+            }
+        }
+
+        // Se o status foi alterado para "Pendente"
+        if (novoStatus === 'Pendente' && cliente.statusPagamento === 'Pago') {
+            if (financeiroSnapshot.exists()) {
+                const totalAtual = financeiroSnapshot.data().total || 0;
+                const valorCliente = cliente.valor || 30;  // Substitua 30 pelo valor padrão se não estiver definido
+                await updateDoc(financeiroRef, {
+                    total: totalAtual - valorCliente
+                });
+            }
+        }
+
         setSelectedCliente(null);
         fetchClientesPendentes();
     };
+
 
     const toggleStatusList = (cliente) => {
         if (selectedCliente && selectedCliente.id === cliente.id) {
@@ -84,8 +119,28 @@ function Agendamentos() {
         if (confirm(`Você tem certeza que deseja excluir o cliente ${cliente.nome}?`)) {
             const db = getFirestore(app);
             const clienteRef = doc(db, 'agendamentos', cliente.id);
+
+            // Remover o cliente
             await deleteDoc(clienteRef);
-            fetchClientesPendentes();
+
+            // Atualizar o total financeiro
+            const financeiroRef = doc(db, 'financeiro', 'total');
+            const financeiroSnapshot = await getDoc(financeiroRef);
+
+            if (financeiroSnapshot.exists()) {
+                const totalAtual = financeiroSnapshot.data().total || 0;
+                const valorCliente = cliente.valor || 30;  // Substitua 30 pelo valor padrão se não estiver definido
+
+                // Subtrair o valor do cliente do total
+                const novoTotal = totalAtual - valorCliente;
+
+                // Atualizar o total financeiro ou definir como 0 se o total for negativo
+                await updateDoc(financeiroRef, {
+                    total: Math.max(novoTotal, 0)
+                });
+            }
+
+            fetchClientesPendentes(); // Atualiza a lista de clientes pendentes
         }
     };
 
@@ -121,6 +176,11 @@ function Agendamentos() {
                                     className="w-full p-2 rounded bg-gray-800 text-white placeholder-gray-400"
                                 />
                             </div>
+                            <Link href="/cadastro" passHref>
+                                <button className="inline-block mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-full">
+                                    Cadastrar Novo Cliente
+                                </button>
+                            </Link>
 
                             <div className="w-full max-w-screen-sm p-4 bg-gray-900 rounded-lg shadow-lg mb-4">
                                 <div className="flex justify-center space-x-4">
@@ -237,6 +297,9 @@ function Agendamentos() {
                         </div>
                         <Link href="/" className="fixed bottom-4 left-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
                             Voltar
+                        </Link>
+                        <Link href="/dashboard" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500" aria-label="Ver Total Financeiro">
+                            Ver Total Financeiro
                         </Link>
                     </main>
                 </>

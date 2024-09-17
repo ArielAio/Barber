@@ -77,6 +77,18 @@ const Home = () => {
           </Link>
         </motion.div>
       </div>
+
+      {/* Botão para dashboard */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, delay: 0.6 }}
+        className="fixed bottom-4 right-4"
+      >
+        <Link href="/dashboard" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500" aria-label="Ver Total Financeiro">
+          Ver Total Financeiro
+        </Link>
+      </motion.div>
     </div>
   );
 };

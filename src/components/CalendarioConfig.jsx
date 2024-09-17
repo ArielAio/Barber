@@ -7,9 +7,25 @@ import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firesto
 import app from '../lib/firebase';
 import Modal from './Modal';
 
+moment.locale('pt-br');
 const localizer = momentLocalizer(moment);
 
-const Calendario = () => {
+const messages = {
+    today: 'Hoje',
+    previous: 'Voltar',
+    next: 'Próximo',
+    month: 'Mês',
+    week: 'Semana',
+    day: 'Dia',
+    agenda: 'Agenda',
+    date: 'Data',
+    time: 'Hora',
+    event: 'Evento',
+    noEventsInRange: 'Nenhum evento neste período.',
+    showMore: total => `+ Ver mais (${total})`,
+};
+
+const CalendarioConfig = () => {
     const [localEvents, setLocalEvents] = useState([]);
     const [selectedCliente, setSelectedCliente] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,10 +70,18 @@ const Calendario = () => {
         <div>
             <Calendar
                 localizer={localizer}
+                messages={messages} // Traduções aplicadas
                 events={localEvents}
                 startAccessor="start"
                 endAccessor="end"
-                style={{ height: 500, width: '100%' }}
+                style={{
+                    height: 500,
+                    width: '100%',
+                    backgroundColor: 'white',
+                    color: '#333',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
+                }}
                 className="bg-white text-black rounded-lg border-none shadow-sm"
                 defaultView="month"
                 popup
@@ -75,4 +99,4 @@ const Calendario = () => {
     );
 };
 
-export default Calendario;
+export default CalendarioConfig;
