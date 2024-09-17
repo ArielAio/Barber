@@ -49,6 +49,11 @@ function Agendamentos() {
         return () => unsubscribe();
     }, [auth, db, router]);
 
+    useEffect(() => {
+        fetchClientesPendentes();
+    }, [statusFilter, searchTerm]); // Adicione statusFilter e searchTerm aqui
+
+
     const fetchClientesPendentes = async () => {
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         let clientesData = agendamentosSnapshot.docs.map(doc => {
