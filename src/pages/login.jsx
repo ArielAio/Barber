@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import app from '../lib/firebase';
 
 const Login = () => {
@@ -9,14 +10,16 @@ const Login = () => {
     const [error, setError] = useState('');
     const router = useRouter();
     const auth = getAuth(app);
+    const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
     const handleLogin = async (e) => {
         e.preventDefault();
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            router.push('/admin');
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            await redirectUser(user.uid);
         } catch (err) {
             setError(err.message);
         }
@@ -24,10 +27,28 @@ const Login = () => {
 
     const handleGoogleSignIn = async () => {
         try {
-            await signInWithPopup(auth, provider);
-            router.push('/admin');
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+            await redirectUser(user.uid);
         } catch (err) {
             setError(err.message);
+        }
+    };
+
+    const redirectUser = async (userId) => {
+        const docRef = doc(db, 'users', userId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const userData = docSnap.data();
+            if (userData.role === 'admin') {
+                router.push('/admin');
+            } else {
+                router.push('/');
+            }
+        } else {
+            // Se o documento do usuário não existir, você pode tratar o erro aqui
+            setError('Documento do usuário não encontrado.');
         }
     };
 

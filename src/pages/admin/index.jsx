@@ -62,7 +62,7 @@ const Home = () => {
   }
 
   if (role === null) {
-    return <p>Carregando...</p>;
+    return <LoadingSpinner />;
   }
 
   return (

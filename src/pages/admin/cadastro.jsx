@@ -92,7 +92,7 @@ function Cadastro() {
             setData('');
             setHorario('');
             setError('');
-            router.push('/');
+            router.push('/admin');
         } catch (error) {
             console.error('Erro ao cadastrar Agendamento:', error);
             alert('Erro ao cadastrar Agendamento. Tente novamente.');
@@ -184,7 +184,7 @@ function Cadastro() {
                     </div>
 
                     <button
-                        type="submit"
+                        type="suagendamentosbmit"
                         className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                         Cadastrar

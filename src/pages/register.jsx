@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { db } from '../lib/firebase'; // Importa Firestore
-import { doc, setDoc } from 'firebase/firestore'; // Para salvar dados no Firestore
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import app from '../lib/firebase';
 
 const Register = () => {
@@ -11,6 +10,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const router = useRouter();
   const auth = getAuth(app);
+  const db = getFirestore(app);
   const provider = new GoogleAuthProvider();
 
   const validateEmail = (email) => {
@@ -27,18 +27,17 @@ const Register = () => {
     }
 
     try {
-      // Cria o usuário no Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       // Salva o status do usuário como 'user' no Firestore
       await setDoc(doc(db, 'users', user.uid), {
         email: user.email,
-        role: 'user', // Define o status inicial como 'user'
+        role: 'user',
       });
 
-      // Redireciona para /admin/admin após a criação do usuário
-      router.push('/admin');
+      // Redireciona para a página apropriada
+      await redirectUser(user.uid);
     } catch (err) {
       setError(err.message);
     }
@@ -46,20 +45,33 @@ const Register = () => {
 
   const handleGoogleSignIn = async () => {
     try {
-      // Faz o login com o Google
-      const userCredential = await signInWithPopup(auth, provider);
-      const user = userCredential.user;
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-      // Verifica se o usuário já existe no Firestore
-      const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, {
+      await setDoc(doc(db, 'users', user.uid), {
         email: user.email,
-        role: 'user', // Define o status inicial como 'user'
-      }, { merge: true }); // Usa merge para não sobrescrever dados existentes
+        role: 'user',
+      }, { merge: true });
 
-      router.push('/admin');
+      await redirectUser(user.uid);
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const redirectUser = async (userId) => {
+    const docRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const userData = docSnap.data();
+      if (userData.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
+    } else {
+      setError('Documento do usuário não encontrado.');
     }
   };
 
