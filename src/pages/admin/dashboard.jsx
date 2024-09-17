@@ -70,7 +70,7 @@ function Dashboard() {
                     if (userData.role === 'admin') {
                         fetchDashboardData();
                     } else {
-                        router.push('/nao-pode'); // Redireciona se o papel não for admin
+                        router.push('/'); // Redireciona se o papel não for admin
                     }
                 } else {
                     console.log("Documento não encontrado.");
@@ -187,7 +187,7 @@ function Dashboard() {
                     <Line data={chartData} options={chartOptions} />
                 </div>
             </main>
-            <Link href="/" className="fixed bottom-4 left-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <Link href="/admin" className="fixed bottom-4 left-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
                 Voltar
             </Link>
         </div>

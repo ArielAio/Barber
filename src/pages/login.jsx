@@ -16,7 +16,7 @@ const Login = () => {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            router.push('/');
+            router.push('/admin');
         } catch (err) {
             setError(err.message);
         }
@@ -25,7 +25,7 @@ const Login = () => {
     const handleGoogleSignIn = async () => {
         try {
             await signInWithPopup(auth, provider);
-            router.push('/');
+            router.push('/admin');
         } catch (err) {
             setError(err.message);
         }

@@ -34,7 +34,7 @@ function Agendamentos() {
                     setRole(userData.role);
 
                     if (userData.role !== 'admin') {
-                        router.push('/nao-pode'); // Redireciona se o papel não for admin
+                        router.push('/'); // Redireciona se o papel não for admin
                     } else {
                         fetchClientesPendentes(); // Se o usuário for admin, carrega os dados
                     }
@@ -183,52 +183,52 @@ function Agendamentos() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col bg-black text-white">
+        <div className="min-h-screen flex flex-col bg-gray-900 text-gray-100">
             {loading ? (
                 <LoadingSpinner /> // Mostre o spinner durante o carregamento
             ) : (
                 <>
-                    <header className="py-4 px-6 text-center">
-                        <h1 className="text-2xl font-bold">Agendamentos</h1>
+                    <header className="py-4 px-6 bg-gray-800 text-center">
+                        <h1 className="text-2xl font-bold text-white">Agendamentos</h1>
                     </header>
 
-                    <main className="flex flex-col items-center justify-start space-y-4 mb-8">
-                        <div className="w-full max-w-screen-sm p-4 bg-gray-900 rounded-lg shadow-lg">
+                    <main className="flex flex-col items-center justify-start space-y-4 mb-8 p-4">
+                        <div className="w-full max-w-screen-md p-6 bg-gray-800 rounded-lg shadow-lg">
                             <div className="mb-4">
                                 <input
                                     type="text"
                                     placeholder="Pesquisar por nome..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full p-2 rounded bg-gray-800 text-white placeholder-gray-400"
+                                    className="w-full p-3 rounded bg-gray-700 text-gray-100 placeholder-gray-400 focus:outline-none"
                                 />
                             </div>
                             <Link href="/admin/cadastro" passHref>
-                                <button className="inline-block mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-full">
+                                <button className="inline-block mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     Cadastrar Novo Cliente
                                 </button>
                             </Link>
 
-                            <div className="w-full max-w-screen-sm p-4 bg-gray-900 rounded-lg shadow-lg mb-4">
+                            <div className="w-full max-w-screen-md p-4 bg-gray-800 rounded-lg shadow-lg mb-4">
                                 <div className="flex justify-center space-x-4">
                                     <button
                                         type="button"
                                         onClick={() => setStatusFilter('Todos')}
-                                        className={`px-4 py-2 rounded-full ${statusFilter === 'Todos' ? 'bg-blue-500' : 'bg-gray-700'} hover:bg-blue-700 text-white font-bold`}
+                                        className={`px-4 py-2 rounded-full ${statusFilter === 'Todos' ? 'bg-blue-600' : 'bg-gray-700'} hover:bg-blue-700 text-white font-bold focus:outline-none`}
                                     >
                                         Todos
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setStatusFilter('Pendente')}
-                                        className={`px-4 py-2 rounded-full ${statusFilter === 'Pendente' ? 'bg-red-500' : 'bg-gray-700'} hover:bg-red-700 text-white font-bold`}
+                                        className={`px-4 py-2 rounded-full ${statusFilter === 'Pendente' ? 'bg-red-600' : 'bg-gray-700'} hover:bg-red-700 text-white font-bold focus:outline-none`}
                                     >
                                         Pendentes
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setStatusFilter('Pago')}
-                                        className={`px-4 py-2 rounded-full ${statusFilter === 'Pago' ? 'bg-green-500' : 'bg-gray-700'} hover:bg-green-700 text-white font-bold`}
+                                        className={`px-4 py-2 rounded-full ${statusFilter === 'Pago' ? 'bg-green-600' : 'bg-gray-700'} hover:bg-green-700 text-white font-bold focus:outline-none`}
                                     >
                                         Pagos
                                     </button>
@@ -242,7 +242,7 @@ function Agendamentos() {
                                     {currentClientes.map((cliente, index) => (
                                         <motion.li
                                             key={index}
-                                            className="mb-4 p-4 bg-gray-800 rounded-lg flex flex-col md:flex-row justify-between relative"
+                                            className="mb-4 p-4 bg-gray-700 rounded-lg flex flex-col md:flex-row justify-between relative"
                                             initial={{ opacity: 0, y: -20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -257,7 +257,7 @@ function Agendamentos() {
                                             <div className="flex items-center flex-wrap justify-end gap-2">
                                                 <button
                                                     type="button"
-                                                    className={`px-4 py-2 rounded-full font-bold ${cliente.statusPagamento === 'Pendente' ? 'bg-red-500' : 'bg-green-500'}`}
+                                                    className={`px-4 py-2 rounded-full font-bold ${cliente.statusPagamento === 'Pendente' ? 'bg-red-600' : 'bg-green-600'}`}
                                                     onClick={() => toggleStatusList(cliente)}
                                                 >
                                                     {cliente.statusPagamento === 'Pendente' ? (
@@ -287,14 +287,14 @@ function Agendamentos() {
 
                                                 <button
                                                     onClick={() => handleEdit(cliente)}
-                                                    className="px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-full"
+                                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full"
                                                 >
                                                     <MdEdit size={20} />
                                                 </button>
 
                                                 <button
                                                     onClick={() => handleDelete(cliente)}
-                                                    className="px-4 py-2 bg-red-500 hover:bg-red-700 text-white font-bold rounded-full"
+                                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full"
                                                 >
                                                     <MdDelete size={20} />
                                                 </button>
@@ -312,7 +312,7 @@ function Agendamentos() {
                                                 <button
                                                     type="button"
                                                     onClick={() => paginate(number)}
-                                                    className={`px-4 py-2 rounded-full ${currentPage === number ? 'bg-blue-500' : 'bg-gray-700'} text-white font-bold hover:bg-blue-700`}
+                                                    className={`px-4 py-2 rounded-full ${currentPage === number ? 'bg-blue-600' : 'bg-gray-700'} text-white font-bold hover:bg-blue-700 focus:outline-none`}
                                                 >
                                                     {number}
                                                 </button>
@@ -322,12 +322,12 @@ function Agendamentos() {
                                 </nav>
                             </div>
                         </div>
-                        <Link href="/" className="fixed bottom-4 left-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <Link href="/admin" className="fixed bottom-4 left-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
                             Voltar
                         </Link>
                         <Link
                             href="/admin/dashboard"
-                            className="fixed bottom-4 right-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500"
+                            className="fixed bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500"
                             aria-label="Ver Total Financeiro"
                         >
                             Ver Total Financeiro

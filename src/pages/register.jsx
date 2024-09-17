@@ -38,7 +38,7 @@ const Register = () => {
       });
 
       // Redireciona para /admin/admin após a criação do usuário
-      router.push('/');
+      router.push('/admin');
     } catch (err) {
       setError(err.message);
     }
@@ -57,7 +57,7 @@ const Register = () => {
         role: 'user', // Define o status inicial como 'user'
       }, { merge: true }); // Usa merge para não sobrescrever dados existentes
 
-      router.push('/');
+      router.push('/admin');
     } catch (err) {
       setError(err.message);
     }
