@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { getFirestore, collection, addDoc, getDocs } from 'firebase/firestore';
-import app from '../lib/firebase';
+import app from '../../lib/firebase';
 import moment from 'moment-timezone';
-import LoadingSpinner from '../components/LoadingSpinner'; // Importe o componente de loading
+import LoadingSpinner from '../../components/LoadingSpinner'; // Importe o componente de loading
 import { motion } from 'framer-motion';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 
 function Cadastro() {
     const router = useRouter();
@@ -15,6 +17,35 @@ function Cadastro() {
     const [horario, setHorario] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false); // Estado de carregamento
+    const [role, setRole] = useState(null); // Estado do papel do usuário
+
+    const auth = getAuth();
+    const db = getFirestore(app);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Pega o documento do usuário no Firestore
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    setRole(userData.role);
+
+                    if (userData.role !== 'admin') {
+                        router.push('/nao-pode'); // Redireciona se o papel não for admin
+                    }
+                } else {
+                    console.log("Documento não encontrado.");
+                }
+            } else {
+                router.push('/login'); // Redireciona se não estiver logado
+            }
+        });
+
+        return () => unsubscribe();
+    }, [auth, db, router]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -27,7 +58,6 @@ function Cadastro() {
         setLoading(true); // Inicie o carregamento
 
         try {
-            const db = getFirestore(app);
             const [year, month, day] = data.split('-');
             const [hour, minute] = horario.split(':');
             const timeZone = 'America/Sao_Paulo';
@@ -70,6 +100,10 @@ function Cadastro() {
             setLoading(false); // Encerre o carregamento
         }
     };
+
+    if (role === null) {
+        return <LoadingSpinner />; // Mostre o spinner durante o carregamento da autenticação
+    }
 
     return (
         <div className="bg-black text-white min-h-screen flex flex-col justify-center items-center px-4">

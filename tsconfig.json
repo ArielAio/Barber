@@ -16,6 +16,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/pages/agendamentos.jsx", "src/pages/cadastro.jsx", "src/pages/index.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/pages/admin/agendamentos.jsx", "src/pages/admin/cadastro.jsx", "src/pages/index.jsx"],
   "exclude": ["node_modules"]
 }

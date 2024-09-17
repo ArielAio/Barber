@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs, updateDoc, doc, deleteDoc, getDoc, setDoc } from 'firebase/firestore';
-import app from '../lib/firebase';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
+import { getFirestore, collection, getDocs, updateDoc, doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
+import app from '../../lib/firebase';
 import moment from 'moment-timezone';
 import { MdCheck, MdCancel, MdEdit, MdDelete } from 'react-icons/md';
-import LoadingSpinner from '../components/LoadingSpinner'; // Importe o componente
-import Link from 'next/link';
-import { motion } from 'framer-motion'; // Importe o Framer Motion
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { motion } from 'framer-motion';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 function Agendamentos() {
     const [clientesPendentes, setClientesPendentes] = useState([]);
@@ -14,12 +15,41 @@ function Agendamentos() {
     const [clientesPerPage] = useState(5);
     const [selectedCliente, setSelectedCliente] = useState(null);
     const [statusFilter, setStatusFilter] = useState('Todos');
-    const [searchTerm, setSearchTerm] = useState(''); // Estado para armazenar o texto da pesquisa
+    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
+    const [role, setRole] = useState(null); // Estado para o papel do usuário
     const router = useRouter();
+    const auth = getAuth();
+    const db = getFirestore(app);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Pega o documento do usuário no Firestore
+                const docRef = doc(db, 'users', user.uid);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    setRole(userData.role);
+
+                    if (userData.role !== 'admin') {
+                        router.push('/nao-pode'); // Redireciona se o papel não for admin
+                    } else {
+                        fetchClientesPendentes(); // Se o usuário for admin, carrega os dados
+                    }
+                } else {
+                    console.log("Documento não encontrado.");
+                }
+            } else {
+                router.push('/login'); // Redireciona se não estiver logado
+            }
+        });
+
+        return () => unsubscribe();
+    }, [auth, db, router]);
 
     const fetchClientesPendentes = async () => {
-        const db = getFirestore(app);
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         let clientesData = agendamentosSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -53,12 +83,7 @@ function Agendamentos() {
         setLoading(false); // Termine o carregamento
     };
 
-    useEffect(() => {
-        fetchClientesPendentes();
-    }, [statusFilter, searchTerm]); // Adiciona searchTerm às dependências
-
     const handleStatusChange = async (cliente, novoStatus) => {
-        const db = getFirestore(app);
         const clienteRef = doc(db, 'agendamentos', cliente.id);
 
         // Atualize o status do cliente
@@ -102,7 +127,6 @@ function Agendamentos() {
         fetchClientesPendentes();
     };
 
-
     const toggleStatusList = (cliente) => {
         if (selectedCliente && selectedCliente.id === cliente.id) {
             setSelectedCliente(null);
@@ -117,7 +141,6 @@ function Agendamentos() {
 
     const handleDelete = async (cliente) => {
         if (confirm(`Você tem certeza que deseja excluir o cliente ${cliente.nome}?`)) {
-            const db = getFirestore(app);
             const clienteRef = doc(db, 'agendamentos', cliente.id);
 
             // Remover o cliente
@@ -155,6 +178,10 @@ function Agendamentos() {
         pageNumbers.push(i);
     }
 
+    if (role === null) {
+        return <LoadingSpinner />; // Mostre o spinner durante o carregamento da autenticação
+    }
+
     return (
         <div className="min-h-screen flex flex-col bg-black text-white">
             {loading ? (
@@ -165,7 +192,7 @@ function Agendamentos() {
                         <h1 className="text-2xl font-bold">Agendamentos</h1>
                     </header>
 
-                    <main className="flex flex-col items-center justify-start space-y-4">
+                    <main className="flex flex-col items-center justify-start space-y-4 mb-8">
                         <div className="w-full max-w-screen-sm p-4 bg-gray-900 rounded-lg shadow-lg">
                             <div className="mb-4">
                                 <input
@@ -176,7 +203,7 @@ function Agendamentos() {
                                     className="w-full p-2 rounded bg-gray-800 text-white placeholder-gray-400"
                                 />
                             </div>
-                            <Link href="/cadastro" passHref>
+                            <Link href="/admin/cadastro" passHref>
                                 <button className="inline-block mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-full">
                                     Cadastrar Novo Cliente
                                 </button>
@@ -298,9 +325,14 @@ function Agendamentos() {
                         <Link href="/" className="fixed bottom-4 left-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
                             Voltar
                         </Link>
-                        <Link href="/dashboard" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500" aria-label="Ver Total Financeiro">
+                        <Link
+                            href="/admin/dashboard"
+                            className="fixed bottom-4 right-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500"
+                            aria-label="Ver Total Financeiro"
+                        >
                             Ver Total Financeiro
                         </Link>
+
                     </main>
                 </>
             )}

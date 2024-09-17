@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getFirestore, doc, getDoc, updateDoc, getDocs, collection } from 'firebase/firestore';
 import Link from 'next/link';
-import app from '../../lib/firebase';
+import app from '../../../lib/firebase';
 import moment from 'moment-timezone';
 
 function EditarCliente() {
