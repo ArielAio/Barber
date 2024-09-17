@@ -64,9 +64,9 @@ const Register = () => {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="w-full max-w-md p-8 bg-white rounded shadow-lg">
-        <h1 className="text-2xl text-black font-bold mb-6 text-center">Crie sua conta</h1>
+    <div className="flex items-center justify-center h-screen bg-gray-800">
+      <div className="w-full max-w-md p-8 bg-gray-900 rounded shadow-lg">
+        <h1 className="text-2xl text-white font-bold mb-6 text-center">Crie sua conta</h1>
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
         <form onSubmit={handleRegister} className="space-y-4">
           <input
@@ -74,14 +74,14 @@ const Register = () => {
             placeholder="Seu email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full text-black p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border rounded-lg bg-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
             type="password"
             placeholder="Sua senha"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full text-black p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border rounded-lg bg-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             type="submit"
@@ -91,7 +91,7 @@ const Register = () => {
           </button>
         </form>
         <div className="my-6 text-center">
-          <p className="text-gray-600 mb-4">Ou registre-se com</p>
+          <p className="text-gray-400 mb-4">Ou registre-se com</p>
           <button
             onClick={handleGoogleSignIn}
             className="w-full bg-red-500 text-white p-3 rounded-lg font-semibold hover:bg-red-600 transition-colors"
@@ -100,7 +100,7 @@ const Register = () => {
           </button>
         </div>
         <div className="text-center mt-4">
-          <p className="text-gray-600">
+          <p className="text-gray-400">
             Já tem uma conta?{' '}
             <a href="/login" className="text-blue-500 hover:underline">
               Entrar
