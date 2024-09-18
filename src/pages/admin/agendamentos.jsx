@@ -193,11 +193,8 @@ function Agendamentos() {
                 <LoadingSpinner /> // Mostre o spinner durante o carregamento
             ) : (
                 <>
-                    <header className="py-4 px-6 bg-gray-800 text-center">
-                        <h1 className="text-2xl font-bold text-white">Agendamentos</h1>
-                    </header>
-
                     <main className="flex flex-col items-center justify-start space-y-4 mb-8 p-4">
+                        <h1 className="text-2xl font-bold text-white">Agendamentos</h1>
                         <div className="w-full max-w-screen-md p-6 bg-gray-800 rounded-lg shadow-lg">
                             <div className="mb-4">
                                 <input
@@ -330,14 +327,6 @@ function Agendamentos() {
                         <Link href="/admin" className="fixed bottom-4 left-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
                             Voltar
                         </Link>
-                        <Link
-                            href="/admin/dashboard"
-                            className="fixed bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500"
-                            aria-label="Ver Total Financeiro"
-                        >
-                            Ver Total Financeiro
-                        </Link>
-
                     </main>
                 </>
             )}
