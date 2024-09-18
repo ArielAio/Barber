@@ -63,6 +63,16 @@ function Cadastro() {
             const dataAgendamento = moment.tz(`${year}-${month}-${day} ${hour}:${minute}`, timeZone).toDate();
             const dataFimAgendamento = new Date(dataAgendamento.getTime() + 30 * 60000);
 
+            // Data e hora atuais
+            const agora = new Date();
+
+            // Verifica se a data do agendamento é anterior à data atual
+            if (dataAgendamento <= agora) {
+                setError('Não é possível agendar para uma data e hora no passado.');
+                setLoading(false);
+                return;
+            }
+
             const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
             const agendamentos = agendamentosSnapshot.docs.map(doc => doc.data());
 

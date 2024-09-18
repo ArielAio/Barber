@@ -1,36 +1,10 @@
-import React from 'react';
+import dynamic from 'next/dynamic';
+
+// Importa o componente apenas no cliente
+const ClientOnlyLoadingSpinner = dynamic(() => import('./ClientOnlyLoadingSpinner'), { ssr: false });
 
 const LoadingSpinner = () => {
-  const spinnerStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-  };
-
-  const spinnerCircleStyle = {
-    border: '8px solid rgba(255, 255, 255, 0.2)',
-    borderRadius: '50%',
-    borderTop: '8px solid #00BFFF', // Cor do spinner
-    width: '80px',
-    height: '80px',
-    animation: 'spin 1.5s linear infinite',
-  };
-
-  const styleSheet = `
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  `;
-
-  return (
-    <div style={spinnerStyle}>
-      <div style={spinnerCircleStyle}>
-        <style>{styleSheet}</style>
-      </div>
-    </div>
-  );
+  return <ClientOnlyLoadingSpinner />;
 };
 
 export default LoadingSpinner;
