@@ -11,13 +11,13 @@ import { doc, getDoc } from 'firebase/firestore';
 
 function Cadastro() {
     const router = useRouter();
-    const [nome, setNome] = useState('');
     const [email, setEmail] = useState(''); // Email será preenchido automaticamente
     const [data, setData] = useState('');
     const [horario, setHorario] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [nome, setNome] = useState(''); // Nome será preenchido automaticamente
 
     const auth = getAuth();
     const db = getFirestore(app);
@@ -28,11 +28,14 @@ function Cadastro() {
                 setIsAuthenticated(true);
                 setEmail(user.email); // Preenche o email automaticamente
 
-                // Se desejar verificar informações adicionais do usuário:
+                // Busca informações adicionais do usuário, incluindo o nome
                 const docRef = doc(db, 'users', user.uid);
                 const docSnap = await getDoc(docRef);
 
-                if (!docSnap.exists()) {
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    setNome(userData.username || ''); // Preenche o nome automaticamente
+                } else {
                     console.log("Documento não encontrado.");
                 }
             } else {
@@ -46,7 +49,7 @@ function Cadastro() {
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (!nome || !data || !horario) {
+        if (!data || !horario) {
             alert('Preencha todos os campos!');
             return;
         }
@@ -83,7 +86,6 @@ function Cadastro() {
             });
 
             alert('Agendamento cadastrado com sucesso!');
-            setNome('');
             setData('');
             setHorario('');
             setError('');
@@ -132,18 +134,6 @@ function Cadastro() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <div>
-                        <label htmlFor="nome" className="block text-sm mb-1">Nome:</label>
-                        <input
-                            type="text"
-                            id="nome"
-                            placeholder="Insira seu nome"
-                            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                            value={nome}
-                            onChange={(e) => setNome(e.target.value)}
-                        />
-                    </div>
-
                     <div>
                         <label htmlFor="data" className="block text-sm mb-1">Data:</label>
                         <input

@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import translateFirebaseError from '../components/translateFirebaseError';
 import app from '../lib/firebase';
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState(''); // Novo estado para o nome de usuário
   const [error, setError] = useState('');
   const router = useRouter();
   const auth = getAuth(app);
@@ -26,12 +28,18 @@ const Register = () => {
       return;
     }
 
+    if (username.trim() === '') {
+      setError('Por favor, insira um nome de usuário.');
+      return;
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Salva o status do usuário como 'user' no Firestore
+      // Salva o nome de usuário, email e status no Firestore
       await setDoc(doc(db, 'users', user.uid), {
+        username: username,
         email: user.email,
         role: 'user',
       });
@@ -39,7 +47,7 @@ const Register = () => {
       // Redireciona para a página apropriada
       await redirectUser(user.uid);
     } catch (err) {
-      setError(err.message);
+      setError(translateFirebaseError(err.code));
     }
   };
 
@@ -48,14 +56,18 @@ const Register = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
-        role: 'user',
-      }, { merge: true });
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          email: user.email,
+          role: 'user',
+        },
+        { merge: true }
+      );
 
       await redirectUser(user.uid);
     } catch (err) {
-      setError(err.message);
+      setError(translateFirebaseError(err.code));
     }
   };
 
@@ -81,6 +93,13 @@ const Register = () => {
         <h1 className="text-2xl text-white font-bold mb-6 text-center">Crie sua conta</h1>
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
         <form onSubmit={handleRegister} className="space-y-4">
+          <input
+            type="text"
+            placeholder="Nome de usuário" // Novo campo para nome de usuário
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full p-3 border rounded-lg bg-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
           <input
             type="email"
             placeholder="Seu email"

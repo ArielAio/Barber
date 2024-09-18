@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import translateFirebaseError from '../components/translateFirebaseError';
 import app from '../lib/firebase';
 
 const Login = () => {
@@ -13,6 +14,7 @@ const Login = () => {
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
+
     const handleLogin = async (e) => {
         e.preventDefault();
 
@@ -21,7 +23,8 @@ const Login = () => {
             const user = userCredential.user;
             await redirectUser(user.uid);
         } catch (err) {
-            setError(err.message);
+            // Usa a função de tradução de erro
+            setError(translateFirebaseError(err.code));
         }
     };
 
@@ -31,7 +34,8 @@ const Login = () => {
             const user = result.user;
             await redirectUser(user.uid);
         } catch (err) {
-            setError(err.message);
+            // Usa a função de tradução de erro
+            setError(translateFirebaseError(err.code));
         }
     };
 
@@ -47,7 +51,6 @@ const Login = () => {
                 router.push('/');
             }
         } else {
-            // Se o documento do usuário não existir, você pode tratar o erro aqui
             setError('Documento do usuário não encontrado.');
         }
     };
