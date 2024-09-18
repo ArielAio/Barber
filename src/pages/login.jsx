@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import translateFirebaseError from '../components/translateFirebaseError';
 import app from '../lib/firebase';
 
@@ -14,7 +14,6 @@ const Login = () => {
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
-
     const handleLogin = async (e) => {
         e.preventDefault();
 
@@ -23,7 +22,6 @@ const Login = () => {
             const user = userCredential.user;
             await redirectUser(user.uid);
         } catch (err) {
-            // Usa a função de tradução de erro
             setError(translateFirebaseError(err.code));
         }
     };
@@ -32,9 +30,21 @@ const Login = () => {
         try {
             const result = await signInWithPopup(auth, provider);
             const user = result.user;
+
+            // Cria um documento de usuário no Firestore se não existir
+            const docRef = doc(db, 'users', user.uid);
+            const docSnap = await getDoc(docRef);
+
+            if (!docSnap.exists()) {
+                await setDoc(docRef, {
+                    username: user.displayName || user.email.split('@')[0], // Usa o nome do Google ou o email sem domínio
+                    email: user.email,
+                    role: 'user',
+                });
+            }
+
             await redirectUser(user.uid);
         } catch (err) {
-            // Usa a função de tradução de erro
             setError(translateFirebaseError(err.code));
         }
     };
