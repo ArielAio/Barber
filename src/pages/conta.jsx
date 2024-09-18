@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { getAuth, onAuthStateChanged, updatePassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, updatePassword, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from 'firebase/auth';
+import { getFirestore, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useRouter } from 'next/router';
@@ -83,6 +83,36 @@ const Conta = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      const uid = user.uid;
+      // Confirmação da exclusão da conta
+      const confirmDelete = window.confirm('Tem certeza que deseja excluir sua conta? Esse processo é irreversível.');
+
+      if (confirmDelete) {
+        try {
+          // Deletar o documento do Firestore
+          await deleteDoc(doc(db, 'users', uid));
+          console.log('Usuário deletado do Firestore');
+
+          // Deletar o usuário do Firebase Authentication
+          await deleteUser(user);
+          console.log('Usuário deletado do Firebase Authentication');
+
+          // Redirecionar o usuário após a exclusão
+          alert('Sua conta foi excluída com sucesso.');
+          router.push('/login');
+        } catch (error) {
+          console.error('Erro ao excluir a conta:', error);
+          setError('Ocorreu um erro ao excluir sua conta. Tente novamente.');
+        }
+      }
+    } else {
+      setError('Nenhum usuário logado.');
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -134,6 +164,16 @@ const Conta = () => {
                 {error && <p className="text-red-500 mt-2">{error}</p>}
               </div>
             )}
+
+            {/* Botão de Excluir Conta */}
+            <button
+              onClick={handleDeleteAccount}
+              className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              Excluir Conta
+            </button>
+
+            {error && <p className="text-red-500 mt-2">{error}</p>}
           </div>
         </div>
       ) : (
