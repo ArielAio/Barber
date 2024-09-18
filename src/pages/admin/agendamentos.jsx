@@ -53,7 +53,6 @@ function Agendamentos() {
         fetchClientesPendentes();
     }, [statusFilter, searchTerm]); // Adicione statusFilter e searchTerm aqui
 
-
     const fetchClientesPendentes = async () => {
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         let clientesData = agendamentosSnapshot.docs.map(doc => {
@@ -68,9 +67,18 @@ function Agendamentos() {
                 email: data.email,
                 dataAgendamento: dataHoraLocal.format('DD/MM/YYYY'),
                 horaAgendamento: dataHoraLocal.format('HH:mm'),
-                statusPagamento: data.statusPagamento || 'Pendente'
+                statusPagamento: data.statusPagamento || 'Pendente',
+                dataHoraUTC: dataHoraUTC // Adiciona dataHoraUTC para filtragem
             };
         });
+
+        // Filtra agendamentos futuros e passados no intervalo de 30 dias
+        const agora = moment().tz('America/Sao_Paulo');
+        const trintaDiasAtras = moment().subtract(30, 'days');
+
+        clientesData = clientesData.filter(cliente =>
+            cliente.dataHoraUTC >= agora.toDate() || cliente.dataHoraUTC >= trintaDiasAtras.toDate()
+        );
 
         // Filtra por status
         if (statusFilter !== 'Todos') {

@@ -8,6 +8,7 @@ const UserHeader = () => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [navOpen, setNavOpen] = useState(false);
     const menuRef = useRef(null); // Referência para o menu dropdown
+    const navRef = useRef(null); // Referência para o menu mobile
     const router = useRouter();
     const auth = getAuth();
 
@@ -24,24 +25,23 @@ const UserHeader = () => {
         setNavOpen(!navOpen);
     };
 
-    // Fechar o menu ao clicar fora
+    // Fechar o menu dropdown ao clicar fora
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
                 setMenuOpen(false);
             }
+            if (navRef.current && !navRef.current.contains(event.target)) {
+                setNavOpen(false);
+            }
         };
 
-        if (menuOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        } else {
-            document.removeEventListener('mousedown', handleClickOutside);
-        }
+        document.addEventListener('mousedown', handleClickOutside);
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [menuOpen]);
+    }, [menuOpen, navOpen]);
 
     return (
         <header className="bg-gray-800 text-white shadow-md py-4 fixed w-full top-0 z-50">
@@ -89,7 +89,7 @@ const UserHeader = () => {
                 </nav>
 
                 {/* Menu para mobile */}
-                <div className={`lg:hidden absolute top-16 left-0 w-full bg-gray-800 text-white shadow-lg ${navOpen ? 'block' : 'hidden'}`}>
+                <div ref={navRef} className={`lg:hidden absolute top-16 left-0 w-full bg-gray-800 text-white shadow-lg ${navOpen ? 'block' : 'hidden'}`}>
                     <nav className="flex flex-col space-y-2 py-4 px-4">
                         <Link href="/user/agendamentos" className="hover:text-blue-500 transition-colors">
                             Agendamentos
