@@ -7,6 +7,7 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import AdminHeader from '../components/AdminHeader';
 import UserHeader from '../components/UserHeader';
 import '@/styles/globals.css';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function App({ Component, pageProps }: AppProps) {
   const [role, setRole] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const noHeaderRoutes = ['/login', '/register'];
 
   if (loading) {
-    return <div>Loading...</div>; // Ou um spinner de carregamento
+    return <LoadingSpinner />; // Mostre o spinner durante o carregamento da autenticação
   }
 
   return (
@@ -47,7 +48,7 @@ export default function App({ Component, pageProps }: AppProps) {
       {!noHeaderRoutes.includes(router.pathname) && (
         role === 'admin' ? <AdminHeader /> : <UserHeader />
       )}
-      
+
       {/* Adiciona padding-top apenas se o Header estiver presente */}
       <div className={noHeaderRoutes.includes(router.pathname) ? '' : 'pt-16'}>
         <Component {...pageProps} />
