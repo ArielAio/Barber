@@ -8,7 +8,6 @@ import app from '../lib/firebase';
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState(''); // Novo estado para o nome de usuário
   const [error, setError] = useState('');
   const router = useRouter();
   const auth = getAuth(app);
@@ -28,18 +27,13 @@ const Register = () => {
       return;
     }
 
-    if (username.trim() === '') {
-      setError('Por favor, insira um nome de usuário.');
-      return;
-    }
-
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       // Salva o nome de usuário, email e status no Firestore
       await setDoc(doc(db, 'users', user.uid), {
-        username: username,
+        username: email.split('@')[0], // Gera um nome de usuário básico se não for fornecido
         email: user.email,
         role: 'user',
       });
@@ -56,13 +50,15 @@ const Register = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
+      // Salva os dados do usuário no Firestore
       await setDoc(
         doc(db, 'users', user.uid),
         {
+          username: user.displayName || user.email.split('@')[0], // Usa o nome fornecido pelo Google ou o email sem domínio
           email: user.email,
           role: 'user',
         },
-        { merge: true }
+        { merge: true } // Garante que os dados existentes sejam preservados
       );
 
       await redirectUser(user.uid);
@@ -93,13 +89,6 @@ const Register = () => {
         <h1 className="text-2xl text-white font-bold mb-6 text-center">Crie sua conta</h1>
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
         <form onSubmit={handleRegister} className="space-y-4">
-          <input
-            type="text"
-            placeholder="Nome de usuário" // Novo campo para nome de usuário
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full p-3 border rounded-lg bg-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
           <input
             type="email"
             placeholder="Seu email"
