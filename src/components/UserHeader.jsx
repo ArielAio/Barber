@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { getAuth, signOut } from 'firebase/auth';
 import { useRouter } from 'next/router';
-import { FaUserCircle } from 'react-icons/fa';
+import { FaUserCircle, FaBars } from 'react-icons/fa';
 
 const UserHeader = () => {
     const [menuOpen, setMenuOpen] = useState(false);
+    const [navOpen, setNavOpen] = useState(false);
+    const menuRef = useRef(null); // Referência para o menu dropdown
     const router = useRouter();
     const auth = getAuth();
 
@@ -18,6 +20,29 @@ const UserHeader = () => {
         setMenuOpen(!menuOpen);
     };
 
+    const toggleNav = () => {
+        setNavOpen(!navOpen);
+    };
+
+    // Fechar o menu ao clicar fora
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setMenuOpen(false);
+            }
+        };
+
+        if (menuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        } else {
+            document.removeEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [menuOpen]);
+
     return (
         <header className="bg-gray-800 text-white shadow-md py-4 fixed w-full top-0 z-50">
             <div className="container mx-auto flex justify-between items-center px-4">
@@ -25,7 +50,16 @@ const UserHeader = () => {
                     <Link href="/">Barbearia</Link>
                 </h1>
 
-                <nav className="flex items-center space-x-4">
+                {/* Botão de hambúrguer para mobile */}
+                <button
+                    onClick={toggleNav}
+                    className="lg:hidden text-white focus:outline-none"
+                >
+                    <FaBars size={24} />
+                </button>
+
+                {/* Menu para desktop */}
+                <nav className={`lg:flex items-center space-x-4 hidden`}>
                     <Link href="/user/agendamentos" className="hover:text-blue-500 transition-colors">
                         Agendamentos
                     </Link>
@@ -33,7 +67,7 @@ const UserHeader = () => {
                         Agendar
                     </Link>
 
-                    <div className="relative">
+                    <div className="relative" ref={menuRef}>
                         <button
                             onClick={toggleMenu}
                             className="flex items-center space-x-2 focus:outline-none"
@@ -53,6 +87,28 @@ const UserHeader = () => {
                         </div>
                     </div>
                 </nav>
+
+                {/* Menu para mobile */}
+                <div className={`lg:hidden absolute top-16 left-0 w-full bg-gray-800 text-white shadow-lg ${navOpen ? 'block' : 'hidden'}`}>
+                    <nav className="flex flex-col space-y-2 py-4 px-4">
+                        <Link href="/user/agendamentos" className="hover:text-blue-500 transition-colors">
+                            Agendamentos
+                        </Link>
+                        <Link href="/user/cadastro" className="hover:text-blue-500 transition-colors">
+                            Agendar
+                        </Link>
+                        <div className="border-t border-gray-700 mt-2"></div>
+                        <Link href="/conta" className="hover:text-blue-500 transition-colors">
+                            Minha Conta
+                        </Link>
+                        <button
+                            onClick={handleLogout}
+                            className="text-left hover:text-blue-500 transition-colors"
+                        >
+                            Sair
+                        </button>
+                    </nav>
+                </div>
             </div>
         </header>
     );
