@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaCalendarPlus, FaListAlt, FaUserCircle } from 'react-icons/fa';
+import { FaCalendarPlus, FaListAlt } from 'react-icons/fa';
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
@@ -31,97 +31,99 @@ const Home = () => {
     else if (hour < 18) setGreeting('Boa tarde');
     else setGreeting('Boa noite');
 
-    return () => unsubscribe();
-  }, [auth, router]);
+    // Add a minimum loading time of 1 second for smoother transitions
+    const minLoadingTime = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
 
-  const buttonVariants = {
-    hover: { scale: 1.05, transition: { duration: 0.2 } },
-    tap: { scale: 0.95 }
-  };
+    return () => {
+      unsubscribe();
+      clearTimeout(minLoadingTime);
+    };
+  }, [router]);
 
+  // Separate loading component for smoother transition
   if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  return (
-    <AnimatePresence>
+    return (
       <motion.div
-        className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white px-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.8 }}
+        className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 flex items-center justify-center"
       >
-        <motion.div
-          className="absolute top-4 right-4 flex items-center"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.8 }}
-        >
-          <FaUserCircle className="text-3xl mr-2" />
-          <span className="font-semibold">{user?.username || user?.email}</span>
-        </motion.div>
-
-        <motion.h1
-          className="text-4xl font-bold mb-4 text-center text-blue-300"
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          {greeting}, {user?.username || 'Cliente'}!
-        </motion.h1>
-
-        <motion.p
-          className="text-xl mb-12 text-center text-blue-200"
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          Bem-vindo à nossa Barbearia!
-        </motion.p>
-
-        <div className="flex flex-col items-center space-y-6 w-full max-w-md">
-          <motion.div
-            className="w-full"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-          >
-            <Link href="/user/cadastro">
-              <motion.a
-                className="flex items-center justify-center px-6 py-4 bg-blue-600 text-white rounded-lg text-xl font-semibold shadow-lg hover:bg-blue-700 transition-colors"
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <FaCalendarPlus className="mr-3" />
-                Agende Seu Corte
-              </motion.a>
-            </Link>
-          </motion.div>
-
-          <motion.div
-            className="w-full"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
-          >
-            <Link href="/user/agendamentos">
-              <motion.a
-                className="flex items-center justify-center px-6 py-4 bg-green-600 text-white rounded-lg text-xl font-semibold shadow-lg hover:bg-green-700 transition-colors"
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-              >
-                <FaListAlt className="mr-3" />
-                Consultar Agendamentos
-              </motion.a>
-            </Link>
-          </motion.div>
-        </div>
-
+        <LoadingSpinner />
       </motion.div>
-    </AnimatePresence >
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900">
+      <AnimatePresence>
+        <motion.div
+          className="flex flex-col min-h-screen w-full text-white"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-6">
+            <motion.h2
+              className="text-3xl sm:text-4xl font-bold mb-4 text-center text-blue-300"
+              initial={{ opacity: 0, y: -30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              {greeting}, {user?.username || 'Cliente'}!
+            </motion.h2>
+
+            <motion.p
+              className="text-lg sm:text-xl mb-8 text-center text-blue-200"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              Bem-vindo à nossa Barbearia! O que você gostaria de fazer hoje?
+            </motion.p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl">
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Link href="/user/cadastro" passHref>
+                  <motion.a
+                    className="flex items-center justify-center px-6 py-4 bg-blue-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-blue-700 transition-colors w-full"
+                    whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(59, 130, 246, 0.5)" }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FaCalendarPlus className="mr-3 text-xl" />
+                    Agende Seu Corte
+                  </motion.a>
+                </Link>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Link href="/user/agendamentos" passHref>
+                  <motion.a
+                    className="flex items-center justify-center px-6 py-4 bg-green-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-green-700 transition-colors w-full"
+                    whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(16, 185, 129, 0.5)" }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FaListAlt className="mr-3 text-xl" />
+                    Consultar Agendamentos
+                  </motion.a>
+                </Link>
+              </motion.div>
+            </div>
+          </main>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 };
 

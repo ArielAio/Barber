@@ -4,8 +4,12 @@ import { getAuth, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthPro
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import translateFirebaseError from '../components/translateFirebaseError';
 import app from '../lib/firebase';
+import Link from 'next/link';
+import { FaGoogle, FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
 const Register = () => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -14,31 +18,20 @@ const Register = () => {
   const db = getFirestore(app);
   const provider = new GoogleAuthProvider();
 
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
   const handleRegister = async (e) => {
     e.preventDefault();
-
-    if (!validateEmail(email)) {
-      setError('O email fornecido não é válido.');
+    if (!name.trim()) {
+      setError('Por favor, insira seu nome.');
       return;
     }
-
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
-      // Salva o nome de usuário, email e status no Firestore
       await setDoc(doc(db, 'users', user.uid), {
-        username: email.split('@')[0], // Gera um nome de usuário básico se não for fornecido
+        username: name,
         email: user.email,
         role: 'user',
       });
-
-      // Redireciona para a página apropriada
       await redirectUser(user.uid);
     } catch (err) {
       setError(translateFirebaseError(err.code));
@@ -49,18 +42,15 @@ const Register = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-
-      // Salva os dados do usuário no Firestore
       await setDoc(
         doc(db, 'users', user.uid),
         {
-          username: user.displayName || user.email.split('@')[0], // Usa o nome fornecido pelo Google ou o email sem domínio
+          username: user.displayName || '',
           email: user.email,
           role: 'user',
         },
-        { merge: true } // Garante que os dados existentes sejam preservados
+        { merge: true }
       );
-
       await redirectUser(user.uid);
     } catch (err) {
       setError(translateFirebaseError(err.code));
@@ -68,67 +58,178 @@ const Register = () => {
   };
 
   const redirectUser = async (userId) => {
-    const docRef = doc(db, 'users', userId);
-    const docSnap = await getDoc(docRef);
+    router.push('/');
+  };
 
-    if (docSnap.exists()) {
-      const userData = docSnap.data();
-      if (userData.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/');
-      }
-    } else {
-      setError('Documento do usuário não encontrado.');
-    }
+  const buttonVariants = {
+    hover: { scale: 1.05, transition: { duration: 0.2 } },
+    tap: { scale: 0.95 }
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-800">
-      <div className="w-full max-w-md p-8 bg-gray-900 rounded shadow-lg">
-        <h1 className="text-2xl text-white font-bold mb-6 text-center">Crie sua conta</h1>
-        {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
-        <form onSubmit={handleRegister} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Seu email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 border rounded-lg bg-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="password"
-            placeholder="Sua senha"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 border rounded-lg bg-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white p-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+    <motion.div 
+      className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white p-4 sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.8 }}
+    >
+      <motion.div 
+        className="w-full max-w-md bg-gray-800 rounded-lg shadow-xl overflow-hidden"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+      >
+        <div className="px-6 py-8 sm:px-8 sm:py-10">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
           >
-            Registrar
-          </button>
-        </form>
-        <div className="my-6 text-center">
-          <p className="text-gray-400 mb-4">Ou registre-se com</p>
-          <button
-            onClick={handleGoogleSignIn}
-            className="w-full bg-red-500 text-white p-3 rounded-lg font-semibold hover:bg-red-600 transition-colors"
+            <h2 className="text-center text-3xl font-extrabold text-blue-300 mb-2">
+              Crie sua conta
+            </h2>
+            <p className="text-center text-sm text-blue-200 mb-6">
+              Junte-se a nós e comece a agendar seus cortes
+            </p>
+          </motion.div>
+          
+          {error && (
+            <div className="bg-red-800 border border-red-600 text-red-100 px-4 py-3 rounded-md mb-6" role="alert">
+              <span className="block sm:inline">{error}</span>
+            </div>
+          )}
+          
+          <motion.form 
+            className="space-y-6" 
+            onSubmit={handleRegister}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
           >
-            Google
-          </button>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="sr-only">
+                  Nome
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaUser className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    required
+                    className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Seu nome"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="email-address" className="sr-only">
+                  Endereço de e-mail
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaEnvelope className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="email-address"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Endereço de e-mail"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="password" className="sr-only">
+                  Senha
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaLock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Senha"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <motion.button
+                type="submit"
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                Registrar
+              </motion.button>
+            </div>
+          </motion.form>
+
+          <motion.div 
+            className="mt-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+          >
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-800 text-gray-300">Ou registre-se com</span>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <motion.button
+                onClick={handleGoogleSignIn}
+                className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                <FaGoogle className="w-5 h-5 mr-2" />
+                Google
+              </motion.button>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="mt-6 text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
+          >
+            <p className="text-sm text-blue-200">
+              Já tem uma conta?{' '}
+              <Link href="/login" className="font-medium text-blue-400 hover:text-blue-300">
+                Faça login
+              </Link>
+            </p>
+          </motion.div>
         </div>
-        <div className="text-center mt-4">
-          <p className="text-gray-400">
-            Já tem uma conta?{' '}
-            <a href="/login" className="text-blue-500 hover:underline">
-              Entrar
-            </a>
-          </p>
-        </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
