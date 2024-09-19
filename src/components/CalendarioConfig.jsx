@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -6,13 +6,15 @@ import 'moment/locale/pt-br';
 import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import app from '../lib/firebase';
 import Modal from './Modal';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaChevronLeft, FaChevronRight, FaCalendarAlt } from 'react-icons/fa';
 
 moment.locale('pt-br');
 const localizer = momentLocalizer(moment);
 
 const messages = {
     today: 'Hoje',
-    previous: 'Voltar',
+    previous: 'Anterior',
     next: 'Próximo',
     month: 'Mês',
     week: 'Semana',
@@ -29,8 +31,10 @@ const CalendarioConfig = () => {
     const [localEvents, setLocalEvents] = useState([]);
     const [selectedCliente, setSelectedCliente] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [view, setView] = useState('month');
+    const [date, setDate] = useState(new Date());
 
-    const fetchAgendamentos = async () => {
+    const fetchAgendamentos = useCallback(async () => {
         const db = getFirestore(app);
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         const agendamentosData = agendamentosSnapshot.docs.map(doc => {
@@ -41,15 +45,16 @@ const CalendarioConfig = () => {
                 title: data.nome,
                 start: start,
                 end: end,
-                id: doc.id
+                id: doc.id,
+                status: data.statusPagamento
             };
         });
         setLocalEvents(agendamentosData);
-    };
+    }, []);
 
     useEffect(() => {
         fetchAgendamentos();
-    }, []);
+    }, [fetchAgendamentos]);
 
     const handleSelectEvent = async (event) => {
         const db = getFirestore(app);
@@ -66,36 +71,88 @@ const CalendarioConfig = () => {
         setIsModalOpen(false);
     };
 
+    const eventStyleGetter = (event) => {
+        let backgroundColor = '#3174ad';
+        if (event.status === 'Pago') {
+            backgroundColor = '#4caf50';
+        } else if (event.status === 'Pendente') {
+            backgroundColor = '#ff9800';
+        }
+        return {
+            style: {
+                backgroundColor,
+                borderRadius: '5px',
+                opacity: 0.8,
+                color: 'white',
+                border: '0px',
+                display: 'block'
+            }
+        };
+    };
+
+    const CustomToolbar = ({ onNavigate, label }) => (
+        <div className="rbc-toolbar">
+            <span className="rbc-btn-group">
+                <button type="button" onClick={() => onNavigate('PREV')}>
+                    <FaChevronLeft />
+                </button>
+                <button type="button" onClick={() => onNavigate('TODAY')}>
+                    <FaCalendarAlt />
+                </button>
+                <button type="button" onClick={() => onNavigate('NEXT')}>
+                    <FaChevronRight />
+                </button>
+            </span>
+            <span className="rbc-toolbar-label">{label}</span>
+            <span className="rbc-btn-group">
+                <button type="button" onClick={() => setView('month')}>Mês</button>
+                <button type="button" onClick={() => setView('week')}>Semana</button>
+                <button type="button" onClick={() => setView('day')}>Dia</button>
+            </span>
+        </div>
+    );
+
     return (
-        <div>
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="p-4 bg-gray-100 rounded-lg shadow-lg"
+        >
             <Calendar
                 localizer={localizer}
-                messages={messages} // Traduções aplicadas
+                messages={messages}
                 events={localEvents}
                 startAccessor="start"
                 endAccessor="end"
                 style={{
-                    height: 500,
+                    height: 'calc(100vh - 100px)',
                     width: '100%',
-                    backgroundColor: 'white',
-                    color: '#333',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
                 }}
-                className="bg-white text-black rounded-lg border-none shadow-sm"
-                defaultView="month"
+                className="bg-white text-gray-800 rounded-lg border-none shadow-sm"
+                views={['month', 'week', 'day']}
+                view={view}
+                onView={setView}
+                date={date}
+                onNavigate={setDate}
                 popup
                 onSelectEvent={handleSelectEvent}
+                eventPropGetter={eventStyleGetter}
+                components={{
+                    toolbar: CustomToolbar
+                }}
             />
 
-            {isModalOpen && (
-                <Modal
-                    isOpen={isModalOpen}
-                    onClose={handleCloseModal}
-                    cliente={selectedCliente}
-                />
-            )}
-        </div>
+            <AnimatePresence>
+                {isModalOpen && (
+                    <Modal
+                        isOpen={isModalOpen}
+                        onClose={handleCloseModal}
+                        cliente={selectedCliente}
+                    />
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 };
 

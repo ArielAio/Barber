@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { FaCalendarAlt, FaUserPlus, FaList } from 'react-icons/fa';
 
 const Home = () => {
   const [randomText, setRandomText] = useState('');
@@ -57,18 +58,20 @@ const Home = () => {
     }, 2000);
   }, []);
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  const menuItems = [
+    { href: '/admin/cadastro', icon: FaUserPlus, text: 'Agendar Novo Cliente' },
+    { href: '/admin/agendamentos', icon: FaList, text: 'Visualizar Cadastros' },
+    { href: '/admin/calendario', icon: FaCalendarAlt, text: 'Calendário' },
+  ];
 
-  if (role === null) {
+  if (loading || role === null) {
     return <LoadingSpinner />;
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white px-4 py-8">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white px-4 py-8">
       <motion.h1
-        className="text-3xl font-bold mb-8 text-center"
+        className="text-4xl md:text-5xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500"
         initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -76,48 +79,24 @@ const Home = () => {
         {randomText}
       </motion.h1>
 
-      <div className="flex flex-col space-y-4 w-full max-w-xs">
-        {/* Link para agendar novo cliente */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Link
-            href="/admin/cadastro"
-            className="block px-6 py-3 bg-blue-600 text-white rounded-lg text-center text-lg font-semibold shadow-md hover:bg-blue-700 transition-transform transform hover:scale-105"
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+        {menuItems.map((item, index) => (
+          <motion.div
+            key={item.href}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: index * 0.1 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            Agendar Novo Cliente
-          </Link>
-        </motion.div>
-
-        {/* Link para visualizar cadastros */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <Link
-            href="/admin/agendamentos"
-            className="block px-6 py-3 bg-blue-600 text-white rounded-lg text-center text-lg font-semibold shadow-md hover:bg-blue-700 transition-transform transform hover:scale-105"
-          >
-            Visualizar Cadastros
-          </Link>
-        </motion.div>
-
-        {/* Link para calendário */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <Link
-            href="/admin/calendario"
-            className="block px-6 py-3 bg-blue-600 text-white rounded-lg text-center text-lg font-semibold shadow-md hover:bg-blue-700 transition-transform transform hover:scale-105"
-          >
-            Calendário
-          </Link>
-        </motion.div>
+            <Link href={item.href}>
+              <div className="flex flex-col items-center justify-center p-6 bg-white bg-opacity-10 rounded-xl backdrop-filter backdrop-blur-lg shadow-lg hover:bg-opacity-20 transition-all duration-300">
+                <item.icon className="text-4xl mb-4 text-blue-400" />
+                <span className="text-lg font-semibold text-center">{item.text}</span>
+              </div>
+            </Link>
+          </motion.div>
+        ))}
       </div>
     </div>
   );

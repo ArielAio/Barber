@@ -118,66 +118,66 @@ const Conta = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-blue-900 text-white">
       {userData ? (
-        <div className="max-w-md w-full bg-gray-800 p-8 rounded-lg shadow-lg">
-          <h1 className="text-3xl font-bold mb-6">Minha Conta</h1>
-          <p><strong>Nome de usuário:</strong> {userData.username || 'Não informado'}</p>
-          <p><strong>Email:</strong> {userData.email}</p>
+        <div className="max-w-md w-full bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg p-8 rounded-2xl shadow-2xl">
+          <h1 className="text-4xl font-bold mb-6 text-center text-blue-300">Minha Conta</h1>
+          <div className="space-y-4">
+            <p className="text-lg"><span className="font-semibold text-blue-300">Nome de usuário:</span> {userData.username || 'Não informado'}</p>
+            <p className="text-lg"><span className="font-semibold text-blue-300">Email:</span> {userData.email}</p>
+          </div>
           
-          <div className="mt-6">
+          <div className="mt-8 space-y-4">
             <button
               onClick={() => setShowChangePassword(!showChangePassword)}
-              className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
             >
               {showChangePassword ? 'Cancelar Alterar Senha' : 'Alterar Senha'}
             </button>
 
             {showChangePassword && (
-              <div className="mt-4">
+              <div className="space-y-4 animate-fadeIn">
                 <input
                   type="password"
                   placeholder="Senha Atual"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white bg-opacity-80"
                 />
                 <input
                   type="password"
                   placeholder="Nova Senha"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full mt-2 rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-white bg-opacity-80"
                 />
                 <button
                   onClick={handleChangePassword}
-                  className="mt-4 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
                 >
-                  Alterar Senha
+                  Confirmar Alteração de Senha
                 </button>
                 <button
                   onClick={handleResetPassword}
-                  className="mt-2 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50"
                 >
                   Enviar Email para Redefinição de Senha
                 </button>
-                {error && <p className="text-red-500 mt-2">{error}</p>}
               </div>
             )}
 
-            {/* Botão de Excluir Conta */}
             <button
               onClick={handleDeleteAccount}
-              className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
             >
               Excluir Conta
             </button>
 
-            {error && <p className="text-red-500 mt-2">{error}</p>}
+            {error && <p className="text-red-400 mt-4 text-center">{error}</p>}
           </div>
         </div>
       ) : (
-        <p>Nenhum dado do usuário encontrado.</p>
+        <p className="text-xl">Nenhum dado do usuário encontrado.</p>
       )}
     </div>
   );

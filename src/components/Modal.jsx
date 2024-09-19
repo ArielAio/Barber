@@ -1,57 +1,114 @@
-// components/Modal.js
 import React from 'react';
-import { useRouter } from 'next/router';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaTimes, FaUser, FaEnvelope, FaCalendarAlt, FaClock, FaMoneyBillWave } from 'react-icons/fa';
+import moment from 'moment';
 
 const Modal = ({ isOpen, onClose, cliente }) => {
-    const router = useRouter();
+    if (!isOpen || !cliente) return null;
 
-    if (!isOpen) return null;
-
-    // Formata a data para exibir apenas a data
     const formatDate = (date) => {
         if (!date) return '';
-        return new Date(date).toLocaleDateString('pt-BR'); // Ajuste o local conforme necessário
+        return moment(date.toDate()).format('DD/MM/YYYY');
     };
 
-    // Formata a hora para exibir apenas a hora e minuto
     const formatTime = (date) => {
         if (!date) return '';
-        return new Date(date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); // Exibe apenas horas e minutos
+        return moment(date.toDate()).format('HH:mm');
     };
 
-    // Calcula a data e hora final do atendimento (30 minutos após a data inicial)
-    const getEndDate = (startDate) => {
+    const getEndTime = (startDate) => {
         if (!startDate) return '';
-        const endDate = new Date(startDate);
-        endDate.setMinutes(endDate.getMinutes() + 30); // Adiciona 30 minutos
-        return endDate;
+        return moment(startDate.toDate()).add(30, 'minutes').format('HH:mm');
     };
 
-    const startDate = cliente?.dataAgendamento?.toDate();
-    const endDate = getEndDate(startDate);
+    const backdrop = {
+        visible: { opacity: 1 },
+        hidden: { opacity: 0 },
+    };
+
+    const modal = {
+        hidden: {
+            y: "-100vh",
+            opacity: 0,
+        },
+        visible: {
+            y: "0",
+            opacity: 1,
+            transition: {
+                delay: 0.1,
+                type: "spring",
+                damping: 25,
+                stiffness: 500,
+            },
+        },
+    };
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-75">
-            <div className="bg-white text-black rounded-lg shadow-lg w-11/12 max-w-lg">
-                <div className="p-4 border-b">
-                    <h2 className="text-xl font-bold">Detalhes do Cliente</h2>
-                </div>
-                <div className="p-4">
-                    <p><strong>Nome:</strong> {cliente?.nome}</p>
-                    <p><strong>Email:</strong> {cliente?.email}</p>
-                    <p><strong>Data de Agendamento:</strong> {formatDate(startDate)}</p>
-                    <p><strong>Horário de Agendamento:</strong> {formatTime(startDate)} - {formatTime(endDate)}</p>
-                </div>
-                <div className="p-4 border-t flex justify-end">
-                    <button
-                        onClick={onClose}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+                    variants={backdrop}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                >
+                    <motion.div
+                        className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden"
+                        variants={modal}
                     >
-                        Fechar
-                    </button>
-                </div>
-            </div>
-        </div>
+                        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 flex justify-between items-center">
+                            <h2 className="text-2xl font-bold text-white">Detalhes do Agendamento</h2>
+                            <button
+                                onClick={onClose}
+                                className="text-white hover:text-gray-200 transition duration-150"
+                            >
+                                <FaTimes size={24} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center space-x-3">
+                                <FaUser className="text-gray-400" size={20} />
+                                <p className="text-gray-800"><span className="font-semibold">Nome:</span> {cliente.nome}</p>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <FaEnvelope className="text-gray-400" size={20} />
+                                <p className="text-gray-800"><span className="font-semibold">Email:</span> {cliente.email}</p>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <FaCalendarAlt className="text-gray-400" size={20} />
+                                <p className="text-gray-800"><span className="font-semibold">Data:</span> {formatDate(cliente.dataAgendamento)}</p>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <FaClock className="text-gray-400" size={20} />
+                                <p className="text-gray-800">
+                                    <span className="font-semibold">Horário:</span> {formatTime(cliente.dataAgendamento)} - {getEndTime(cliente.dataAgendamento)}
+                                </p>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <FaMoneyBillWave className="text-gray-400" size={20} />
+                                <p className="text-gray-800">
+                                    <span className="font-semibold">Status de Pagamento:</span>{' '}
+                                    <span className={`px-2 py-1 rounded-full text-sm ${
+                                        cliente.statusPagamento === 'Pago' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'
+                                    }`}>
+                                        {cliente.statusPagamento}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        <div className="bg-gray-100 px-6 py-4">
+                            <button
+                                onClick={onClose}
+                                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 };
 

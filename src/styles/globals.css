@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 31, 41, 55;
+  --background-end-rgb: 17, 24, 39;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,4 +30,17 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* Adicione estilos personalizados aqui */
+.btn {
+  @apply px-4 py-2 rounded-full transition-colors duration-300;
+}
+
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white;
+}
+
+.input {
+  @apply w-full p-3 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500;
 }

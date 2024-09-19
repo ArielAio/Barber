@@ -4,6 +4,8 @@ import { getFirestore, doc, getDoc, updateDoc, getDocs, collection } from 'fireb
 import Link from 'next/link';
 import app from '../../../lib/firebase';
 import moment from 'moment-timezone';
+import { motion } from 'framer-motion';
+import { FaArrowLeft, FaCalendarAlt, FaClock } from 'react-icons/fa';
 
 function EditarCliente() {
     const router = useRouter();
@@ -94,79 +96,111 @@ function EditarCliente() {
         }
     };
 
-    if (!cliente) return <p>Carregando...</p>;
+    if (!cliente) return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-black">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                className="text-white text-2xl font-bold"
+            >
+                Carregando...
+            </motion.div>
+        </div>
+    );
 
     return (
-        <div className="min-h-screen flex flex-col bg-black text-white">
-            <Link href="/agendamentos" className="absolute top-4 left-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-                Voltar
+        <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-900 to-black text-white">
+            <Link href="/agendamentos" className="absolute top-4 left-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300 ease-in-out transform hover:scale-105">
+                <FaArrowLeft className="inline-block mr-2" /> Voltar
             </Link>
 
-            <header className="py-4 px-6 text-center">
-                <h1 className="text-2xl font-bold">Editar Cliente</h1>
+            <header className="py-8 px-6 text-center">
+                <motion.h1 
+                    initial={{ y: -50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-3xl font-bold"
+                >
+                    Editar Cliente
+                </motion.h1>
             </header>
 
-            {/* Formulário de Edição */}
-            <main className="flex flex-col items-center justify-center space-y-4">
-                <div className="w-full max-w-screen-sm p-4 bg-gray-900 rounded-lg shadow-lg">
-                    {error && <p className="text-red-500 mb-4">{error}</p>}
-                    <form onSubmit={handleSubmit}>
-                        <div className="mb-4">
-                            <label htmlFor="nome" className="block text-sm mb-1">Nome:</label>
+            <main className="flex-grow flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
+                <motion.div 
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="w-full max-w-md p-8 bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg rounded-xl shadow-2xl"
+                >
+                    {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <label htmlFor="nome" className="block text-sm font-medium mb-1">Nome:</label>
                             <input
                                 type="text"
                                 id="nome"
                                 value={nome}
                                 onChange={(e) => setNome(e.target.value)}
-                                className="w-full rounded-md border text-black border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 required
                             />
                         </div>
 
-                        <div className="mb-4">
-                            <label htmlFor="email" className="block text-sm mb-1">Email:</label>
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium mb-1">Email:</label>
                             <input
                                 type="email"
                                 id="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full rounded-md border text-black border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 required
                             />
                         </div>
 
-                        <div className="mb-4">
-                            <label htmlFor="data" className="block text-sm mb-1">Data:</label>
-                            <input
-                                type="date"
-                                id="data"
-                                value={dataAgendamento}
-                                onChange={(e) => setDataAgendamento(e.target.value)}
-                                className="w-full rounded-md border text-black border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                required
-                            />
+                        <div className="flex space-x-4">
+                            <div className="flex-1">
+                                <label htmlFor="data" className="block text-sm font-medium mb-1">Data:</label>
+                                <div className="relative">
+                                    <FaCalendarAlt className="absolute top-3 left-3 text-gray-400" />
+                                    <input
+                                        type="date"
+                                        id="data"
+                                        value={dataAgendamento}
+                                        onChange={(e) => setDataAgendamento(e.target.value)}
+                                        className="w-full rounded-md border border-gray-300 pl-10 pr-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex-1">
+                                <label htmlFor="hora" className="block text-sm font-medium mb-1">Horário:</label>
+                                <div className="relative">
+                                    <FaClock className="absolute top-3 left-3 text-gray-400" />
+                                    <input
+                                        type="time"
+                                        id="hora"
+                                        value={horaAgendamento}
+                                        onChange={(e) => setHoraAgendamento(e.target.value)}
+                                        className="w-full rounded-md border border-gray-300 pl-10 pr-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="mb-4">
-                            <label htmlFor="hora" className="block text-sm mb-1">Horário:</label>
-                            <input
-                                type="time"
-                                id="hora"
-                                value={horaAgendamento}
-                                onChange={(e) => setHoraAgendamento(e.target.value)}
-                                className="w-full rounded-md border text-black border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                required
-                            />
-                        </div>
-
-                        <button
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             type="submit"
-                            className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-300 ease-in-out"
                         >
                             Atualizar
-                        </button>
+                        </motion.button>
                     </form>
-                </div>
+                </motion.div>
             </main>
         </div>
     );
