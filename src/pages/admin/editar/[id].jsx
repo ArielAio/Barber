@@ -89,7 +89,7 @@ function EditarCliente() {
             });
 
             alert('Dados do cliente atualizados com sucesso!');
-            router.push('/agendamentos'); // Navega de volta para a lista de clientes
+            router.push('/admin/agendamentos'); // Navega de volta para a lista de clientes
         } catch (error) {
             console.error('Erro ao atualizar cliente:', error);
             alert('Erro ao atualizar cliente. Tente novamente.');
