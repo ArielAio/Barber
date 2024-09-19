@@ -16,7 +16,7 @@ function Cadastro() {
     const [data, setData] = useState('');
     const [horario, setHorario] = useState('');
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [nome, setNome] = useState('');
 
@@ -41,10 +41,15 @@ function Cadastro() {
             } else {
                 router.push('/login');
             }
+            setIsLoading(false);
         });
 
         return () => unsubscribe();
     }, [auth, db, router]);
+
+    const getCurrentDate = () => {
+        return new Date().toISOString().split('T')[0];
+    };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -54,7 +59,7 @@ function Cadastro() {
             return;
         }
 
-        setLoading(true);
+        setIsLoading(true);
 
         try {
             const [year, month, day] = data.split('-');
@@ -67,7 +72,7 @@ function Cadastro() {
 
             if (dataAgendamento <= agora) {
                 setError('Não é possível agendar para uma data e hora no passado.');
-                setLoading(false);
+                setIsLoading(false);
                 return;
             }
 
@@ -82,7 +87,7 @@ function Cadastro() {
 
             if (!isTimeAvailable) {
                 setError('Horário já ocupado. Escolha outro intervalo.');
-                setLoading(false);
+                setIsLoading(false);
                 return;
             }
 
@@ -103,11 +108,11 @@ function Cadastro() {
             console.error('Erro ao cadastrar Agendamento:', error);
             setError('Erro ao cadastrar Agendamento. Tente novamente.');
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
-    if (!isAuthenticated) {
+    if (isLoading) {
         return <LoadingSpinner />;
     }
 
@@ -139,7 +144,7 @@ function Cadastro() {
                     </motion.p>
                 )}
 
-                {loading ? (
+                {isLoading ? (
                     <LoadingSpinner />
                 ) : (
                     <motion.form
@@ -157,6 +162,7 @@ function Cadastro() {
                                 className="w-full bg-gray-700 rounded-md border border-gray-600 px-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                                 value={data}
                                 onChange={(e) => setData(e.target.value)}
+                                min={getCurrentDate()} // Add this line
                             />
                         </div>
 
@@ -174,8 +180,9 @@ function Cadastro() {
                         <button
                             type="submit"
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
+                            disabled={isLoading}
                         >
-                            Agendar
+                            {isLoading ? 'Agendando...' : 'Agendar'}
                         </button>
                     </motion.form>
                 )}

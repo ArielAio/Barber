@@ -58,12 +58,20 @@ function Agendamentos() {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    const selectedDate = new Date(dataAgendamento);
+    const now = new Date();
+
+    if (selectedDate < now) {
+      setFeedbackMessage('Não é possível agendar para uma data no passado.');
+      return;
+    }
+
     if (window.confirm('Tem certeza que deseja atualizar este agendamento?')) {
       try {
         const agendamentoRef = doc(db, 'agendamentos', selectedAgendamento.id);
         await updateDoc(agendamentoRef, {
           nome,
-          dataAgendamento: new Date(dataAgendamento) // Atualiza a data com o novo valor
+          dataAgendamento: selectedDate
         });
         setSelectedAgendamento(null);
         setNome('');
@@ -165,6 +173,7 @@ function Agendamentos() {
               id="dataAgendamento"
               value={dataAgendamento}
               onChange={(e) => setDataAgendamento(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
               className="mt-2 w-full p-2 border border-gray-600 rounded bg-gray-700"
             />
             <button

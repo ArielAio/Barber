@@ -67,6 +67,12 @@ function EditarCliente() {
             const timeZone = 'America/Sao_Paulo';
             const dataHora = moment.tz({ year: ano, month: mes - 1, day: dia, hour: hora, minute: minuto }, timeZone).toDate();
 
+            // Verifica se a data selecionada é no passado
+            if (dataHora.isBefore(moment())) {
+                setError('Não é possível agendar para uma data no passado.');
+                return;
+            }
+
             // Calcula o início e o fim do novo agendamento
             const newStart = dataHora;
             const newEnd = new Date(newStart.getTime() + 30 * 60000);
@@ -169,6 +175,7 @@ function EditarCliente() {
                                         id="data"
                                         value={dataAgendamento}
                                         onChange={(e) => setDataAgendamento(e.target.value)}
+                                        min={moment().format('YYYY-MM-DD')} // Set minimum date to today
                                         className="w-full rounded-md border border-gray-300 pl-10 pr-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         required
                                     />
