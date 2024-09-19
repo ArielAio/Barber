@@ -5,14 +5,15 @@ import Link from 'next/link';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaCalendarPlus, FaListAlt } from 'react-icons/fa';
-import { motion } from 'framer-motion';
+import { FaCalendarPlus, FaListAlt, FaUserCircle, FaCut, FaInfoCircle } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 import UserHeader from '../components/UserHeader';
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [greeting, setGreeting] = useState('');
+  const [showTip, setShowTip] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,6 +61,11 @@ const Home = () => {
   if (!user) {
     return null;
   }
+
+  const buttonVariants = {
+    hover: { scale: 1.05, transition: { duration: 0.2 } },
+    tap: { scale: 0.95 }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -118,6 +124,51 @@ const Home = () => {
                 <span className="group-hover:underline">Consultar Agendamentos</span>
               </Link>
             </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <Link href="/servicos" className="flex items-center justify-center px-6 py-4 bg-purple-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-purple-700 transition-colors w-full group">
+                <FaCut className="mr-3 text-xl group-hover:rotate-12 transition-transform" />
+                <span className="group-hover:underline">Nossos Serviços</span>
+              </Link>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <button
+                onClick={() => setShowTip(!showTip)}
+                className="flex items-center justify-center px-6 py-4 bg-yellow-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-yellow-700 transition-colors w-full group"
+              >
+                <FaInfoCircle className="mr-3 text-xl group-hover:rotate-12 transition-transform" />
+                <span className="group-hover:underline">Dica do Dia</span>
+              </button>
+            </motion.div>
+          </motion.div>
+
+          <AnimatePresence>
+            {showTip && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="mt-6 p-4 bg-blue-800 rounded-lg shadow-lg max-w-md"
+              >
+                <p className="text-white text-center">
+                  Dica: Mantenha seu cabelo hidratado bebendo bastante água e usando produtos adequados para o seu tipo de cabelo!
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mt-8"
+          >
+            <Link href="/conta" className="flex items-center text-blue-300 hover:text-blue-400 transition-colors group">
+              <FaUserCircle className="mr-2 group-hover:rotate-12 transition-transform" />
+              <span className="group-hover:underline">Minha Conta</span>
+            </Link>
           </motion.div>
         </main>
       </div>
