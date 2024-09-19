@@ -94,7 +94,7 @@ const Login = () => {
                         transition={{ duration: 0.6, delay: 0.3 }}
                     >
                         <h2 className="text-center text-3xl font-extrabold text-blue-300 mb-2">
-                            Bem-vindo de volta
+                            Faça seu login
                         </h2>
                         <p className="text-center text-sm text-blue-200 mb-6">
                             Entre para acessar sua conta
