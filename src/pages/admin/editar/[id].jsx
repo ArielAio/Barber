@@ -4,12 +4,13 @@ import { getFirestore, doc, getDoc, updateDoc, getDocs, collection } from 'fireb
 import Link from 'next/link';
 import app from '../../../lib/firebase';
 import moment from 'moment-timezone';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaCalendarAlt, FaClock, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { format, addMonths, subMonths, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay, parseISO } from 'date-fns';
+import { motion } from 'framer-motion';
+import { FaArrowLeft, FaCalendarAlt, FaClock } from 'react-icons/fa';
+import { format, parseISO, isEqual } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LoadingSpinner from '../../../components/LoadingSpinner';
-import DateTimeModal from '../../../components/DateTimeModal';
+import DateModal from '../../../components/DateModal';
+import TimeModal from '../../../components/TimeModal';
 
 function EditarCliente() {
     const router = useRouter();
@@ -20,8 +21,8 @@ function EditarCliente() {
     const [dataAgendamento, setDataAgendamento] = useState('');
     const [horaAgendamento, setHoraAgendamento] = useState('');
     const [error, setError] = useState('');
-    const [showModal, setShowModal] = useState(false);
-    const [modalStep, setModalStep] = useState('date');
+    const [showDateModal, setShowDateModal] = useState(false);
+    const [showTimeModal, setShowTimeModal] = useState(false);
     const [selectedDate, setSelectedDate] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [horarios, setHorarios] = useState([]);
@@ -31,7 +32,6 @@ function EditarCliente() {
 
     const db = getFirestore(app);
 
-    // Função para buscar os dados do cliente
     const fetchCliente = async () => {
         if (!id) return;
 
@@ -44,7 +44,7 @@ function EditarCliente() {
                 const dataHora = data.dataAgendamento.toDate();
                 setCliente(data);
                 setNome(data.nome);
-                setEmail(data.email);
+                setEmail(data.email || '');
                 setDataAgendamento(moment(dataHora).format('YYYY-MM-DD'));
                 setHoraAgendamento(moment(dataHora).format('HH:mm'));
                 setSelectedDate(dataHora);
@@ -61,6 +61,23 @@ function EditarCliente() {
     useEffect(() => {
         fetchCliente();
     }, [id]);
+
+    const generateCalendarDays = useCallback(() => {
+        const start = startOfMonth(currentMonth);
+        const end = endOfMonth(currentMonth);
+        const days = eachDayOfInterval({ start, end });
+
+        const firstDayOfWeek = getDay(start);
+        for (let i = 1; i <= firstDayOfWeek; i++) {
+            days.unshift(new Date(start.getFullYear(), start.getMonth(), -i + 1));
+        }
+
+        while (days.length % 7 !== 0) {
+            days.push(new Date(end.getFullYear(), end.getMonth() + 1, days.length - end.getDate() + 1));
+        }
+
+        return days;
+    }, [currentMonth]);
 
     const generateHorarios = useCallback(async (date) => {
         if (!date) return;
@@ -110,44 +127,17 @@ function EditarCliente() {
         }
     }, [selectedDate, generateHorarios]);
 
-    const generateCalendarDays = useCallback(() => {
-        const start = startOfMonth(currentMonth);
-        const end = endOfMonth(currentMonth);
-        const days = eachDayOfInterval({ start, end });
-
-        // Adicionar dias do mês anterior para preencher a primeira semana
-        const firstDayOfWeek = getDay(start);
-        for (let i = 1; i <= firstDayOfWeek; i++) {
-            days.unshift(new Date(start.getFullYear(), start.getMonth(), -i + 1));
-        }
-
-        // Adicionar dias do próximo mês para preencher a última semana
-        while (days.length % 7 !== 0) {
-            days.push(new Date(end.getFullYear(), end.getMonth() + 1, days.length - end.getDate() + 1));
-        }
-
-        return days;
-    }, [currentMonth]);
-
     const handleDateSelect = (date) => {
         setSelectedDate(date);
         setDataAgendamento(format(date, 'yyyy-MM-dd'));
-        setModalStep('time');
+        setShowDateModal(false);
+        setShowTimeModal(true);
         generateHorarios(date);
     };
 
     const handleTimeSelect = (time) => {
         setHoraAgendamento(time);
-        setShowModal(false);
-        setModalStep('date');
-    };
-
-    const handlePrevMonth = () => {
-        setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
-    };
-
-    const handleNextMonth = () => {
-        setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
+        setShowTimeModal(false);
     };
 
     const handleSubmit = async (event) => {
@@ -166,24 +156,25 @@ function EditarCliente() {
 
             const clienteRef = doc(db, 'agendamentos', id);
 
-            await updateDoc(clienteRef, {
+            const updatedData = {
                 nome,
-                email,
                 dataAgendamento: dataHora
-            });
+            };
+
+            if (email) {
+                updatedData.email = email;
+            } else {
+                // Se o email estiver vazio, remova-o do documento
+                updatedData.email = null;
+            }
+
+            await updateDoc(clienteRef, updatedData);
 
             alert('Dados do cliente atualizados com sucesso!');
             router.push('/admin/agendamentos');
         } catch (error) {
             console.error('Erro ao atualizar cliente:', error);
             setError('Erro ao atualizar cliente. Tente novamente.');
-        }
-    };
-
-    const handleOverlayClick = (e) => {
-        if (e.target === e.currentTarget) {
-            setShowModal(false);
-            setModalStep('date');
         }
     };
 
@@ -232,24 +223,35 @@ function EditarCliente() {
                         </div>
 
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium mb-1">Email:</label>
+                            <label htmlFor="email" className="block text-sm font-medium mb-1">Email (opcional):</label>
                             <input
                                 type="email"
                                 id="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                required
                             />
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() => setShowModal(true)}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
-                        >
-                            {dataAgendamento && horaAgendamento ? `${format(new Date(dataAgendamento), 'dd/MM/yyyy')} às ${horaAgendamento}` : 'Selecionar Data e Horário'}
-                        </button>
+                        <div className="flex space-x-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowDateModal(true)}
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
+                            >
+                                <FaCalendarAlt className="inline-block mr-2" />
+                                {dataAgendamento ? format(new Date(dataAgendamento), 'dd/MM/yyyy') : 'Selecionar Data'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => dataAgendamento && setShowTimeModal(true)}
+                                className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105 ${!dataAgendamento ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                disabled={!dataAgendamento}
+                            >
+                                <FaClock className="inline-block mr-2" />
+                                {horaAgendamento || 'Selecionar Horário'}
+                            </button>
+                        </div>
 
                         <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -263,18 +265,22 @@ function EditarCliente() {
                 </motion.div>
             </main>
 
-            <DateTimeModal 
-                showModal={showModal}
-                setShowModal={setShowModal}
-                modalStep={modalStep}
-                setModalStep={setModalStep}
+            <DateModal 
+                showModal={showDateModal}
+                setShowModal={setShowDateModal}
                 currentMonth={currentMonth}
                 setCurrentMonth={setCurrentMonth}
                 selectedDate={selectedDate}
                 handleDateSelect={handleDateSelect}
+                generateCalendarDays={generateCalendarDays}
+            />
+
+            <TimeModal
+                showModal={showTimeModal}
+                setShowModal={setShowTimeModal}
+                selectedDate={selectedDate}
                 handleTimeSelect={handleTimeSelect}
                 horarios={horarios}
-                generateCalendarDays={generateCalendarDays}
                 scheduledTimes={scheduledTimes}
                 isLoadingHorarios={isLoadingHorarios}
             />

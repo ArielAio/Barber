@@ -72,9 +72,9 @@ const Home = () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white px-4 py-8">
       <motion.h1
         className="text-4xl md:text-5xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500"
-        initial={{ opacity: 0, y: -30 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
       >
         {randomText}
       </motion.h1>
@@ -83,14 +83,14 @@ const Home = () => {
         {menuItems.map((item, index) => (
           <motion.div
             key={item.href}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1, ease: "easeOut" }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
           >
             <Link href={item.href}>
-              <div className="flex flex-col items-center justify-center p-6 bg-white bg-opacity-10 rounded-xl backdrop-filter backdrop-blur-lg shadow-lg hover:bg-opacity-20 transition-all duration-300">
+              <div className="flex flex-col items-center justify-center p-6 bg-white bg-opacity-10 rounded-xl backdrop-filter backdrop-blur-lg shadow-lg hover:bg-opacity-20 transition-all duration-200">
                 <item.icon className="text-4xl mb-4 text-blue-400" />
                 <span className="text-lg font-semibold text-center">{item.text}</span>
               </div>

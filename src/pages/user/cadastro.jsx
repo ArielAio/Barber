@@ -11,7 +11,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut } from 'react-icons/fa';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subMonths, addMonths, parseISO, isEqual } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import DateTimeModal from '../../components/DateTimeModal';
+import DateModal from '../../components/DateModal';
+import TimeModal from '../../components/TimeModal';
 
 function Cadastro() {
     const router = useRouter();
@@ -25,13 +26,13 @@ function Cadastro() {
     const [servico, setServico] = useState('');
     const [preco, setPreco] = useState('');
     const [horarios, setHorarios] = useState([]);
-    const [showModal, setShowModal] = useState(false);
-    const [modalStep, setModalStep] = useState('date');
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [showDateModal, setShowDateModal] = useState(false);
+    const [showTimeModal, setShowTimeModal] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [scheduledTimes, setScheduledTimes] = useState([]);
     const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
     const [isLoadingScheduledTimes, setIsLoadingScheduledTimes] = useState(true);
+    const [selectedDate, setSelectedDate] = useState(new Date());
 
     const servicoPrecosMap = {
         corte_cabelo: 'R$ 35,00',
@@ -101,14 +102,11 @@ function Cadastro() {
     const handleDateSelect = (date) => {
         setSelectedDate(date);
         setData(format(date, 'yyyy-MM-dd'));
-        setModalStep('time');
         fetchHorarios(date);
     };
 
     const handleTimeSelect = (time) => {
         setHorario(time);
-        setShowModal(false);
-        setModalStep('date');
     };
 
     const fetchHorarios = useCallback(async (date) => {
@@ -276,13 +274,25 @@ function Cadastro() {
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.5, delay: 0.4 }}
                     >
-                        <button
-                            type="button"
-                            onClick={() => setShowModal(true)}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
-                        >
-                            {data && horario ? `${format(new Date(data), 'dd/MM/yyyy')} às ${horario}` : 'Selecionar Data e Horário'}
-                        </button>
+                        <div className="flex space-x-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowDateModal(true)}
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
+                            >
+                                <FaCalendarAlt className="inline-block mr-2" />
+                                {data ? format(new Date(data), 'dd/MM/yyyy') : 'Selecionar Data'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => data && setShowTimeModal(true)}
+                                className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105 ${!data ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                disabled={!data}
+                            >
+                                <FaClock className="inline-block mr-2" />
+                                {horario || 'Selecionar Horário'}
+                            </button>
+                        </div>
 
                         <div className="relative">
                             <FaCut className="absolute top-3 left-3 text-gray-400" />
@@ -327,21 +337,31 @@ function Cadastro() {
                 </div>
             )}
 
-            <DateTimeModal
-                showModal={showModal}
-                setShowModal={setShowModal}
-                modalStep={modalStep}
-                setModalStep={setModalStep}
+            <DateModal
+                showModal={showDateModal}
+                setShowModal={setShowDateModal}
                 currentMonth={currentMonth}
                 setCurrentMonth={setCurrentMonth}
                 selectedDate={selectedDate}
-                handleDateSelect={handleDateSelect}
-                handleTimeSelect={handleTimeSelect}
-                horarios={horarios}
+                handleDateSelect={(date) => {
+                    handleDateSelect(date);
+                    setShowDateModal(false);
+                    setShowTimeModal(true);
+                }}
                 generateCalendarDays={generateCalendarDays}
+            />
+
+            <TimeModal
+                showModal={showTimeModal}
+                setShowModal={setShowTimeModal}
+                selectedDate={selectedDate}
+                handleTimeSelect={(time) => {
+                    handleTimeSelect(time);
+                    setShowTimeModal(false);
+                }}
+                horarios={horarios}
                 scheduledTimes={scheduledTimes}
                 isLoadingHorarios={isLoadingHorarios}
-                isLoadingScheduledTimes={isLoadingScheduledTimes}
             />
         </div>
     );
