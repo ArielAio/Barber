@@ -1,5 +1,5 @@
 // pages/user/agendamentos.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { getFirestore, collection, query, where, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import app from '../../lib/firebase';
@@ -7,9 +7,10 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCalendarAlt, FaEdit, FaTrashAlt, FaChevronLeft } from 'react-icons/fa';
-import { format } from 'date-fns';
+import { FaCalendarAlt, FaEdit, FaTrashAlt, FaChevronLeft, FaClock, FaArrowLeft, FaTimes } from 'react-icons/fa';
+import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import moment from 'moment-timezone';
 
 function Agendamentos() {
   const [agendamentos, setAgendamentos] = useState([]);
@@ -19,10 +20,16 @@ function Agendamentos() {
   const [selectedAgendamento, setSelectedAgendamento] = useState(null);
   const [nome, setNome] = useState('');
   const [dataAgendamento, setDataAgendamento] = useState('');
+  const [horario, setHorario] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const router = useRouter();
   const auth = getAuth();
   const db = getFirestore(app);
+  const [showModal, setShowModal] = useState(false);
+  const [modalStep, setModalStep] = useState('date');
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [horarios, setHorarios] = useState([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -50,15 +57,81 @@ function Agendamentos() {
     return () => unsubscribe();
   }, [auth, db, router]);
 
+  const generateHorarios = useCallback(async (date) => {
+    if (!date) return;
+
+    const start = 9; // 9:00
+    const end = 18; // 18:00
+    const interval = 30; // 30 minutes
+    const generatedHorarios = [];
+
+    for (let hour = start; hour < end; hour++) {
+      for (let minute = 0; minute < 60; minute += interval) {
+        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        generatedHorarios.push(time);
+      }
+    }
+
+    const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
+    const agendamentos = agendamentosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    const availableHorarios = generatedHorarios.map(time => {
+      const [hour, minute] = time.split(':');
+      const dateTime = new Date(date);
+      dateTime.setHours(parseInt(hour), parseInt(minute));
+
+      const isOccupied = agendamentos.some(agendamento => {
+        if (agendamento.id === selectedAgendamento.id) return false; // Exclude the current appointment
+        const agendamentoDate = agendamento.dataAgendamento.toDate();
+        return agendamentoDate.getTime() === dateTime.getTime();
+      });
+
+      return { time, isOccupied };
+    });
+
+    setHorarios(availableHorarios);
+  }, [db, selectedAgendamento]);
+
+  const generateCalendarDays = () => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    return eachDayOfInterval({ start, end });
+  };
+
   const handleEdit = (agendamento) => {
     setSelectedAgendamento(agendamento);
     setNome(agendamento.nome);
-    setDataAgendamento(agendamento.dataAgendamento.toDate().toISOString().slice(0, 16)); // Define o valor inicial no formato YYYY-MM-DDTHH:MM
+    setDataAgendamento(format(agendamento.dataAgendamento.toDate(), 'yyyy-MM-dd'));
+    setHorario(format(agendamento.dataAgendamento.toDate(), 'HH:mm'));
+    setShowModal(true);
+    setModalStep('date');
+    setCurrentMonth(agendamento.dataAgendamento.toDate());
+  };
+
+  const handleDateSelect = (date) => {
+    setSelectedDate(date);
+    setDataAgendamento(format(date, 'yyyy-MM-dd'));
+    setModalStep('time');
+    generateHorarios(date);
+  };
+
+  const handleTimeSelect = (time) => {
+    setHorario(time);
+    setShowModal(false);
+    setModalStep('date');
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(prevMonth => addDays(prevMonth, -30));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prevMonth => addDays(prevMonth, 30));
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    const selectedDate = new Date(dataAgendamento);
+    const selectedDate = new Date(`${dataAgendamento}T${horario}`);
     const now = new Date();
 
     if (selectedDate < now) {
@@ -69,13 +142,17 @@ function Agendamentos() {
     if (window.confirm('Tem certeza que deseja atualizar este agendamento?')) {
       try {
         const agendamentoRef = doc(db, 'agendamentos', selectedAgendamento.id);
+        const timeZone = 'America/Sao_Paulo';
+        const dataAgendamentoMoment = moment.tz(`${dataAgendamento} ${horario}`, timeZone).toDate();
+
         await updateDoc(agendamentoRef, {
           nome,
-          dataAgendamento: selectedDate
+          dataAgendamento: dataAgendamentoMoment
         });
         setSelectedAgendamento(null);
         setNome('');
         setDataAgendamento('');
+        setHorario('');
         setFeedbackMessage('Agendamento atualizado com sucesso!');
         // Atualiza a lista de agendamentos
         const updatedAgendamentosSnapshot = await getDocs(query(collection(db, 'agendamentos'), where('email', '==', userEmail)));
@@ -179,15 +256,13 @@ function Agendamentos() {
               onChange={(e) => setNome(e.target.value)}
               className="mt-2 w-full p-2 border border-gray-600 rounded bg-gray-700"
             />
-            <label htmlFor="dataAgendamento" className="block text-lg mt-4">Data e Hora:</label>
-            <input
-              type="datetime-local"
-              id="dataAgendamento"
-              value={dataAgendamento}
-              onChange={(e) => setDataAgendamento(e.target.value)}
-              min={new Date().toISOString().slice(0, 16)}
-              className="mt-2 w-full p-2 border border-gray-600 rounded bg-gray-700"
-            />
+            <button
+              type="button"
+              onClick={() => setShowModal(true)}
+              className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {dataAgendamento && horario ? `${format(new Date(dataAgendamento), 'dd/MM/yyyy')} às ${horario}` : 'Selecionar Data e Horário'}
+            </button>
             <button
               type="submit"
               className="mt-4 mr-2 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -204,6 +279,100 @@ function Agendamentos() {
           </form>
         </motion.div>
       )}
+
+      {/* Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {modalStep === 'date' ? 'Selecione a Data' : 'Selecione o Horário'}
+                </h2>
+                <button onClick={() => {
+                  if (modalStep === 'time') {
+                    setModalStep('date');
+                  } else {
+                    setShowModal(false);
+                    setModalStep('date');
+                  }
+                }} className="text-gray-600 hover:text-gray-800">
+                  {modalStep === 'time' ? <FaArrowLeft size={24} /> : <FaTimes size={24} />}
+                </button>
+              </div>
+              
+              {modalStep === 'date' && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <button onClick={handlePrevMonth} className="text-blue-500 hover:text-blue-700">
+                      &lt; Mês anterior
+                    </button>
+                    <h3 className="text-lg font-semibold text-gray-700">
+                      {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+                    </h3>
+                    <button onClick={handleNextMonth} className="text-blue-500 hover:text-blue-700">
+                      Próximo mês &gt;
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                      <div key={day} className="text-center font-semibold text-gray-600">{day}</div>
+                    ))}
+                    {generateCalendarDays().map((date, index) => (
+                      <button
+                        key={date.toISOString()}
+                        onClick={() => !isSunday(date) && handleDateSelect(date)}
+                        disabled={isSunday(date) || date < new Date()}
+                        className={`p-2 rounded ${
+                          isSunday(date) || date < new Date()
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                        }`}
+                      >
+                        {format(date, 'd')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {modalStep === 'time' && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4">
+                    Horários disponíveis para {format(selectedDate, 'dd/MM/yyyy')}
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {horarios.map(({ time, isOccupied }) => (
+                      <button
+                        key={time}
+                        onClick={() => !isOccupied && handleTimeSelect(time)}
+                        disabled={isOccupied}
+                        className={`p-2 rounded ${
+                          isOccupied
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {agendamentos.length > 0 ? (

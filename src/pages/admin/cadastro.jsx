@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { getFirestore, collection, addDoc, getDocs } from 'firebase/firestore';
 import app from '../../lib/firebase';
 import moment from 'moment-timezone';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaCalendarAlt, FaClock, FaUser, FaEnvelope, FaArrowLeft, FaCut } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaUser, FaEnvelope, FaArrowLeft, FaCut, FaTimes } from 'react-icons/fa';
+import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
 
 function Cadastro() {
     const router = useRouter();
@@ -21,6 +23,11 @@ function Cadastro() {
     const [role, setRole] = useState(null);
     const [servico, setServico] = useState('');
     const [preco, setPreco] = useState('');
+    const [horarios, setHorarios] = useState([]);
+    const [showModal, setShowModal] = useState(false);
+    const [modalStep, setModalStep] = useState('date');
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
 
     const servicoPrecosMap = {
         corte_cabelo: 'R$ 35,00',
@@ -60,8 +67,69 @@ function Cadastro() {
         setPreco(servicoPrecosMap[servico] || '');
     }, [servico]);
 
-    const getCurrentDate = () => {
-        return new Date().toISOString().split('T')[0];
+    const generateHorarios = useCallback(async () => {
+        if (!data) return;
+
+        const start = 9; // 9:00
+        const end = 18; // 18:00
+        const interval = 30; // 30 minutes
+        const generatedHorarios = [];
+
+        for (let hour = start; hour < end; hour++) {
+            for (let minute = 0; minute < 60; minute += interval) {
+                const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                generatedHorarios.push(time);
+            }
+        }
+
+        const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
+        const agendamentos = agendamentosSnapshot.docs.map(doc => doc.data());
+
+        const availableHorarios = generatedHorarios.map(time => {
+            const [hour, minute] = time.split(':');
+            const dateTime = new Date(data);
+            dateTime.setHours(parseInt(hour), parseInt(minute));
+
+            const isOccupied = agendamentos.some(agendamento => {
+                const agendamentoDate = agendamento.dataAgendamento.toDate();
+                return agendamentoDate.getTime() === dateTime.getTime();
+            });
+
+            return { time, isOccupied };
+        });
+
+        setHorarios(availableHorarios);
+    }, [data, db]);
+
+    useEffect(() => {
+        generateHorarios();
+    }, [generateHorarios]);
+
+    const generateCalendarDays = () => {
+        const start = startOfMonth(currentMonth);
+        const end = endOfMonth(currentMonth);
+        return eachDayOfInterval({ start, end });
+    };
+
+    const handleDateSelect = (date) => {
+        setSelectedDate(date);
+        setData(format(date, 'yyyy-MM-dd'));
+        setModalStep('time');
+        generateHorarios();
+    };
+
+    const handleTimeSelect = (time) => {
+        setHorario(time);
+        setShowModal(false);
+        setModalStep('date');
+    };
+
+    const handlePrevMonth = () => {
+        setCurrentMonth(prevMonth => addDays(prevMonth, -30));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentMonth(prevMonth => addDays(prevMonth, 30));
     };
 
     const handleSubmit = async (event) => {
@@ -80,30 +148,6 @@ function Cadastro() {
             const [hour, minute] = horario.split(':');
             const timeZone = 'America/Sao_Paulo';
             const dataAgendamento = moment.tz(`${year}-${month}-${day} ${hour}:${minute}`, timeZone).toDate();
-            const dataFimAgendamento = new Date(dataAgendamento.getTime() + 30 * 60000);
-
-            const agora = new Date();
-
-            if (dataAgendamento <= agora) {
-                setError('Não é possível agendar para uma data e hora no passado.');
-                setLoading(false);
-                return;
-            }
-
-            const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
-            const agendamentos = agendamentosSnapshot.docs.map(doc => doc.data());
-
-            const isTimeAvailable = agendamentos.every(agendamento => {
-                const start = new Date(agendamento.dataAgendamento.toDate());
-                const end = new Date(start.getTime() + 30 * 60000);
-                return (dataFimAgendamento <= start || dataAgendamento >= end);
-            });
-
-            if (!isTimeAvailable) {
-                setError('Horário já ocupado. Escolha outro intervalo.');
-                setLoading(false);
-                return;
-            }
 
             await addDoc(collection(db, "agendamentos"), {
                 nome,
@@ -195,28 +239,13 @@ function Cadastro() {
                         />
                     </div>
 
-                    <div className="relative">
-                        <FaCalendarAlt className="absolute top-3 left-3 text-gray-400" />
-                        <input
-                            type="date"
-                            id="data"
-                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                            value={data}
-                            onChange={(e) => setData(e.target.value)}
-                            min={getCurrentDate()}
-                        />
-                    </div>
-
-                    <div className="relative">
-                        <FaClock className="absolute top-3 left-3 text-gray-400" />
-                        <input
-                            type="time"
-                            id="horario"
-                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                            value={horario}
-                            onChange={(e) => setHorario(e.target.value)}
-                        />
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowModal(true)}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
+                    >
+                        {data && horario ? `${format(new Date(data), 'dd/MM/yyyy')} às ${horario}` : 'Selecionar Data e Horário'}
+                    </button>
 
                     <div className="relative">
                         <FaCut className="absolute top-3 left-3 text-gray-400" />
@@ -254,6 +283,100 @@ function Cadastro() {
             <Link href="/admin" className="fixed bottom-6 left-6 bg-blue-600 hover:bg-blue-700 text-white font-bold p-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out shadow-lg">
                 <FaArrowLeft />
             </Link>
+
+            {/* Modal */}
+            <AnimatePresence>
+                {showModal && (
+                    <motion.div
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <motion.div
+                            className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                        >
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-2xl font-bold text-gray-800">
+                                    {modalStep === 'date' ? 'Selecione a Data' : 'Selecione o Horário'}
+                                </h2>
+                                <button onClick={() => {
+                                    if (modalStep === 'time') {
+                                        setModalStep('date');
+                                    } else {
+                                        setShowModal(false);
+                                        setModalStep('date');
+                                    }
+                                }} className="text-gray-600 hover:text-gray-800">
+                                    {modalStep === 'time' ? <FaArrowLeft size={24} /> : <FaTimes size={24} />}
+                                </button>
+                            </div>
+                            
+                            {modalStep === 'date' && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <button onClick={handlePrevMonth} className="text-blue-500 hover:text-blue-700">
+                                            &lt; Mês anterior
+                                        </button>
+                                        <h3 className="text-lg font-semibold text-gray-700">
+                                            {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
+                                        </h3>
+                                        <button onClick={handleNextMonth} className="text-blue-500 hover:text-blue-700">
+                                            Próximo mês &gt;
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-7 gap-2">
+                                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                                            <div key={day} className="text-center font-semibold text-gray-600">{day}</div>
+                                        ))}
+                                        {generateCalendarDays().map((date, index) => (
+                                            <button
+                                                key={date.toISOString()}
+                                                onClick={() => !isSunday(date) && handleDateSelect(date)}
+                                                disabled={isSunday(date) || date < new Date()}
+                                                className={`p-2 rounded ${
+                                                    isSunday(date) || date < new Date()
+                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                        : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                                }`}
+                                            >
+                                                {format(date, 'd')}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {modalStep === 'time' && (
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-4">
+                                        Horários disponíveis para {format(selectedDate, 'dd/MM/yyyy')}
+                                    </h3>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {horarios.map(({ time, isOccupied }) => (
+                                            <button
+                                                key={time}
+                                                onClick={() => !isOccupied && handleTimeSelect(time)}
+                                                disabled={isOccupied}
+                                                className={`p-2 rounded ${
+                                                    isOccupied
+                                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                                                }`}
+                                            >
+                                                {time}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
