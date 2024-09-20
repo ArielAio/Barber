@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import UserHeader from '../components/UserHeader';
+import Footer from '../components/Footer';
 
 function Servicos  () {
   const router = useRouter();
@@ -33,9 +34,9 @@ function Servicos  () {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 flex flex-col">
       <UserHeader />
-      <div className="flex flex-col min-h-screen w-full text-white pt-16">
+      <div className="flex flex-col flex-grow w-full text-white pt-16">
         <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-6">
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
@@ -74,6 +75,7 @@ function Servicos  () {
           </motion.div>
         </main>
       </div>
+      <Footer />
     </div>
   );
 };

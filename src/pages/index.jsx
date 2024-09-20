@@ -7,6 +7,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { FaCalendarPlus, FaListAlt, FaCut } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import Footer from '../components/Footer';
+
 
 const fetcher = (...args) => fetch(...args).then(res => res.json());
 
@@ -136,6 +138,7 @@ const Home = () => {
 
           </motion.div>
         </main>
+        <Footer />
       </div>
     </div>
   );

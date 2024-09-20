@@ -1,5 +1,5 @@
 // pages/user/agendamentos.jsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getFirestore, collection, query, where, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import app from '../../lib/firebase';
@@ -8,11 +8,12 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCalendarAlt, FaEdit, FaTrashAlt, FaChevronLeft, FaClock, FaArrowLeft, FaTimes } from 'react-icons/fa';
-import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subDays, parseISO } from 'date-fns';
+import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subDays, parseISO, addHours, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import moment from 'moment-timezone';
 import DateModal from '../../components/DateModal';
 import TimeModal from '../../components/TimeModal';
+import AppointmentCalendar from '../../components/AppointmentCalendar';
+import Footer from '../../components/Footer';
 
 function Agendamentos() {
     const [agendamentos, setAgendamentos] = useState([]);
@@ -34,6 +35,9 @@ function Agendamentos() {
     const [horarios, setHorarios] = useState([]);
     const [scheduledTimes, setScheduledTimes] = useState([]);
     const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
+    const [calendarEvents, setCalendarEvents] = useState([]);
+    const [editingAgendamentoId, setEditingAgendamentoId] = useState(null);
+    const editFormRef = useRef(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -52,11 +56,42 @@ function Agendamentos() {
         try {
             const q = query(collection(db, 'agendamentos'), where('email', '==', email));
             const agendamentosSnapshot = await getDocs(q);
-            const agendamentosList = agendamentosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            agendamentosList.sort((a, b) => b.dataAgendamento.toDate() - a.dataAgendamento.toDate());
-            setRecentAgendamento(agendamentosList[0]);
+            // Buscar o usuário correspondente
+            const userQuery = query(collection(db, 'users'), where('email', '==', email));
+            const userSnapshot = await getDocs(userQuery);
+            let username = '';
+            if (!userSnapshot.empty) {
+                username = userSnapshot.docs[0].data().username || '';
+            }
+
+            const agendamentosList = await Promise.all(agendamentosSnapshot.docs.map(async (doc) => {
+                const agendamentoData = doc.data();
+                return {
+                    id: doc.id,
+                    ...agendamentoData,
+                    username: username // Adicionar o username ao objeto do agendamento
+                };
+            }));
+
+            const now = new Date();
+            const futureAgendamentos = agendamentosList.filter(agendamento =>
+                isAfter(agendamento.dataAgendamento.toDate(), now)
+            );
+
+            futureAgendamentos.sort((a, b) => a.dataAgendamento.toDate() - b.dataAgendamento.toDate());
+            setRecentAgendamento(futureAgendamentos[0] || null);
             setAgendamentos(agendamentosList);
+
+            // Atualizar os eventos do calendário com o nome de usuário
+            const events = agendamentosList.map(agendamento => ({
+                title: getServiceName(agendamento.servico),
+                start: agendamento.dataAgendamento.toDate(),
+                end: addHours(agendamento.dataAgendamento.toDate(), 1),
+                allDay: false,
+                userName: agendamento.username || 'Usuário'
+            }));
+            setCalendarEvents(events);
         } catch (error) {
             console.error('Erro ao buscar agendamentos:', error);
         } finally {
@@ -76,7 +111,6 @@ function Agendamentos() {
     }, [currentMonth]);
 
     const generateHorarios = useCallback(async (date) => {
-        if (!date) return;
         setIsLoadingHorarios(true);
 
         const start = 9; // 9:00
@@ -94,18 +128,18 @@ function Agendamentos() {
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         const agendamentos = agendamentosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const scheduledTimesArray = agendamentos.map(agendamento => 
+        const scheduledTimesArray = agendamentos.map(agendamento =>
             agendamento.dataAgendamento.toDate().toISOString()
         );
         setScheduledTimes(scheduledTimesArray);
 
         const availableHorarios = generatedHorarios.map(time => {
             const [hour, minute] = time.split(':');
-            const dateTime = new Date(date);
+            const dateTime = date ? new Date(date) : new Date();
             dateTime.setHours(parseInt(hour), parseInt(minute));
 
             const isOccupied = agendamentos.some(agendamento => {
-                if (agendamento.id === selectedAgendamento?.id) return false; // Exclude the current appointment
+                if (agendamento.id === editingAgendamentoId) return false; // Exclude the current appointment
                 const agendamentoDate = agendamento.dataAgendamento.toDate();
                 return agendamentoDate.getTime() === dateTime.getTime();
             });
@@ -115,16 +149,35 @@ function Agendamentos() {
 
         setHorarios(availableHorarios);
         setIsLoadingHorarios(false);
-    }, [db, selectedAgendamento]);
+    }, [db, editingAgendamentoId]);
 
     const handleEdit = (agendamento) => {
-        setSelectedAgendamento(agendamento);
-        setNome(agendamento.nome);
-        setDataAgendamento(format(agendamento.dataAgendamento.toDate(), 'yyyy-MM-dd'));
-        setHorario(format(agendamento.dataAgendamento.toDate(), 'HH:mm'));
-        setSelectedDate(agendamento.dataAgendamento.toDate());
-        setCurrentMonth(agendamento.dataAgendamento.toDate());
-        setShowDateModal(true);
+        // If the clicked appointment is already being edited, close it
+        if (editingAgendamentoId === agendamento.id) {
+            setSelectedAgendamento(null);
+            setEditingAgendamentoId(null);
+            setNome('');
+            setDataAgendamento('');
+            setHorario('');
+            setSelectedDate(null);
+        } else {
+            // Close the current editing form (if any) and open the new one
+            setSelectedAgendamento(agendamento);
+            setEditingAgendamentoId(agendamento.id);
+            setNome(agendamento.nome);
+            setDataAgendamento(format(agendamento.dataAgendamento.toDate(), 'yyyy-MM-dd'));
+            setHorario(format(agendamento.dataAgendamento.toDate(), 'HH:mm'));
+            setSelectedDate(agendamento.dataAgendamento.toDate());
+            setCurrentMonth(agendamento.dataAgendamento.toDate());
+            generateHorarios(agendamento.dataAgendamento.toDate());
+
+            // Use setTimeout to ensure the form is rendered before scrolling
+            setTimeout(() => {
+                if (editFormRef.current) {
+                    editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        }
     };
 
     const handleDateSelect = (date) => {
@@ -154,7 +207,7 @@ function Agendamentos() {
             try {
                 const agendamentoRef = doc(db, 'agendamentos', selectedAgendamento.id);
                 const timeZone = 'America/Sao_Paulo';
-                const dataAgendamentoMoment = moment.tz(`${dataAgendamento} ${horario}`, timeZone).toDate();
+                const dataAgendamentoMoment = new Date(`${dataAgendamento}T${horario}`);
 
                 await updateDoc(agendamentoRef, {
                     nome,
@@ -203,7 +256,7 @@ function Agendamentos() {
     return (
         <div className="bg-gradient-to-br from-gray-900 to-blue-900 text-white min-h-screen flex flex-col items-center px-4 py-8">
             <motion.h1
-                className="text-4xl font-bold mb-8 text-center"
+                className="text-3xl md:text-4xl font-bold mb-8 text-center"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
@@ -224,7 +277,7 @@ function Agendamentos() {
 
             {recentAgendamento && (
                 <motion.div
-                    className="w-full max-w-lg bg-opacity-80 bg-blue-800 p-6 rounded-lg shadow-lg mb-8"
+                    className="w-full max-w-lg bg-opacity-90 bg-blue-800 p-6 rounded-lg shadow-lg mb-8"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
@@ -233,16 +286,19 @@ function Agendamentos() {
                         <FaCalendarAlt className="mr-2 text-blue-400" />
                         Próximo Agendamento
                     </h2>
-                    <p className="mb-2 text-lg"><strong>Nome:</strong> {recentAgendamento.nome}</p>
-                    <p className="mb-2 text-lg"><strong>Data e Hora:</strong> {format(recentAgendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
-                    <p className="mb-2 text-lg"><strong>Serviço:</strong> {getServiceName(recentAgendamento.servico)}</p>
-                    <p className="mb-2 text-lg"><strong>Preço:</strong> {recentAgendamento.preco}</p>
+                    <div className="bg-blue-700 bg-opacity-50 p-4 rounded-lg">
+                        <p className="mb-2 text-lg"><strong>Nome:</strong> {recentAgendamento.nome}</p>
+                        <p className="mb-2 text-lg"><strong>Data e Hora:</strong> {format(recentAgendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
+                        <p className="mb-2 text-lg"><strong>Serviço:</strong> {getServiceName(recentAgendamento.servico)}</p>
+                        <p className="mb-2 text-lg"><strong>Preço:</strong> {recentAgendamento.preco}</p>
+                    </div>
                 </motion.div>
             )}
 
             {selectedAgendamento && (
                 <motion.div
-                    className="w-full max-w-lg bg-opacity-80 bg-gray-800 p-6 rounded-lg shadow-lg mb-8"
+                    ref={editFormRef}
+                    className="w-full max-w-lg bg-opacity-90 bg-gray-800 p-6 rounded-lg shadow-lg mb-8"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
@@ -271,9 +327,13 @@ function Agendamentos() {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => dataAgendamento && setShowTimeModal(true)}
-                                className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${!dataAgendamento ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                disabled={!dataAgendamento}
+                                onClick={() => {
+                                    setShowTimeModal(true);
+                                    if (!dataAgendamento) {
+                                        generateHorarios(new Date());
+                                    }
+                                }}
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <FaClock className="inline-block mr-2" />
                                 {horario || 'Selecionar Horário'}
@@ -299,32 +359,46 @@ function Agendamentos() {
                 {agendamentos.map((agendamento) => (
                     <motion.div
                         key={agendamento.id}
-                        className="bg-opacity-80 bg-gray-800 p-4 rounded-lg shadow-lg mb-4"
+                        className="bg-opacity-90 bg-gray-800 p-4 rounded-lg shadow-lg mb-4"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
                     >
-                        <p><strong>Nome:</strong> {agendamento.nome}</p>
-                        <p><strong>Data e Hora:</strong> {format(agendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
-                        <p><strong>Serviço:</strong> {getServiceName(agendamento.servico)}</p>
-                        <p><strong>Preço:</strong> {agendamento.preco}</p>
-                        <div className="mt-2 flex justify-end space-x-2">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                            <div className="mb-2 md:mb-0">
+                                <p className="font-bold text-lg">{agendamento.nome}</p>
+                                <p className="text-sm text-gray-300">{format(agendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <p className="text-sm">{getServiceName(agendamento.servico)}</p>
+                                <p className="font-bold text-yellow-400">{agendamento.preco}</p>
+                            </div>
+                        </div>
+                        <div className="mt-4 flex justify-end space-x-2">
                             <button
                                 onClick={() => handleEdit(agendamento)}
-                                className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                className={`${editingAgendamentoId === agendamento.id
+                                    ? 'bg-gray-500 hover:bg-gray-600'
+                                    : 'bg-yellow-500 hover:bg-yellow-600'
+                                    } text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400`}
                             >
-                                <FaEdit />
+                                <FaEdit className="mr-2 inline-block" /> Editar
                             </button>
                             <button
                                 onClick={() => handleCancel(agendamento.id)}
-                                className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded focus:outline-none focus:ring-2 focus:ring-red-400"
+                                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-red-400"
                             >
-                                <FaTrashAlt />
+                                <FaTrashAlt className="mr-2 inline-block" /> Cancelar
                             </button>
                         </div>
                     </motion.div>
                 ))}
             </motion.div>
+
+            <div className="w-full max-w-lg mt-8">
+                <h2 className="text-2xl font-bold mb-4">Calendário de Agendamentos</h2>
+                <AppointmentCalendar events={calendarEvents} />
+            </div>
 
             <DateModal
                 showModal={showDateModal}
@@ -345,6 +419,7 @@ function Agendamentos() {
                 scheduledTimes={scheduledTimes}
                 isLoadingHorarios={isLoadingHorarios}
             />
+             <Footer/>
         </div>
     );
 }

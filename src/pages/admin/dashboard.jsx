@@ -8,6 +8,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 import LoadingSpinner from '../../components/LoadingSpinner';
 import moment from 'moment-timezone';
 import { FaMoneyBillWave, FaChartLine, FaCalendarCheck, FaChartBar } from 'react-icons/fa';
+import Footer from '../../components/Footer';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -148,6 +149,7 @@ function Dashboard() {
                     <Bar data={chartData} options={chartOptions} />
                 </div>
             </div>
+            <Footer />
         </div>
     );
 }

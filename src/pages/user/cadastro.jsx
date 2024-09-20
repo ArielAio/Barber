@@ -13,6 +13,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subMonths,
 import { ptBR } from 'date-fns/locale';
 import DateModal from '../../components/DateModal';
 import TimeModal from '../../components/TimeModal';
+import Footer from '../../components/Footer';
 
 function Cadastro() {
     const router = useRouter();
@@ -363,6 +364,8 @@ function Cadastro() {
                 scheduledTimes={scheduledTimes}
                 isLoadingHorarios={isLoadingHorarios}
             />
+
+            <Footer />
         </div>
     );
 }

@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useRouter } from 'next/router';
 import { FaUser, FaEnvelope, FaLock, FaTrash } from 'react-icons/fa';
+import Footer from '../components/Footer';
 
 const Conta = () => {
   const [userData, setUserData] = useState(null);
@@ -110,101 +111,104 @@ const Conta = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-blue-900 text-white p-4">
-      {userData ? (
-        <div className="max-w-4xl w-full bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg p-8 rounded-2xl shadow-2xl">
-          <h1 className="text-4xl font-bold mb-6 text-center text-blue-300">Minha Conta</h1>
-          
-          <div className="flex mb-6">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`flex-1 py-2 px-4 rounded-tl-lg rounded-bl-lg ${activeTab === 'profile' ? 'bg-blue-500' : 'bg-gray-700'} transition duration-300`}
-            >
-              Perfil
-            </button>
-            <button
-              onClick={() => setActiveTab('security')}
-              className={`flex-1 py-2 px-4 rounded-tr-lg rounded-br-lg ${activeTab === 'security' ? 'bg-blue-500' : 'bg-gray-700'} transition duration-300`}
-            >
-              Segurança
-            </button>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 to-blue-900 text-white">
+      <div className="flex-grow flex items-center justify-center p-4">
+        {userData ? (
+          <div className="max-w-4xl w-full bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg p-8 rounded-2xl shadow-2xl">
+            <h1 className="text-4xl font-bold mb-6 text-center text-blue-300">Minha Conta</h1>
+            
+            <div className="flex mb-6">
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`flex-1 py-2 px-4 rounded-tl-lg rounded-bl-lg ${activeTab === 'profile' ? 'bg-blue-500' : 'bg-gray-700'} transition duration-300`}
+              >
+                Perfil
+              </button>
+              <button
+                onClick={() => setActiveTab('security')}
+                className={`flex-1 py-2 px-4 rounded-tr-lg rounded-br-lg ${activeTab === 'security' ? 'bg-blue-500' : 'bg-gray-700'} transition duration-300`}
+              >
+                Segurança
+              </button>
+            </div>
+
+            {activeTab === 'profile' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex items-center space-x-4">
+                  <FaUser className="text-blue-300 text-2xl" />
+                  <div>
+                    <p className="text-sm text-gray-400">Nome de usuário</p>
+                    <p className="text-lg font-semibold">{userData.username || 'Não informado'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <FaEnvelope className="text-blue-300 text-2xl" />
+                  <div>
+                    <p className="text-sm text-gray-400">Email</p>
+                    <p className="text-lg font-semibold">{userData.email}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'security' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="bg-gray-800 p-6 rounded-lg">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center">
+                    <FaLock className="mr-2" /> Alterar Senha
+                  </h2>
+                  <input
+                    type="password"
+                    placeholder="Senha Atual"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full rounded-lg border border-gray-600 px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-gray-700"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Nova Senha"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full rounded-lg border border-gray-600 px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-gray-700"
+                  />
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={handleChangePassword}
+                      className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+                    >
+                      Confirmar Alteração
+                    </button>
+                    <button
+                      onClick={handleResetPassword}
+                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50"
+                    >
+                      Redefinir por Email
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-gray-800 p-6 rounded-lg">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center text-red-500">
+                    <FaTrash className="mr-2" /> Excluir Conta
+                  </h2>
+                  <p className="mb-4 text-gray-400">Esta ação é irreversível. Todos os seus dados serão permanentemente removidos.</p>
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+                  >
+                    Excluir Minha Conta
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {error && <p className="text-red-400 mt-4 text-center">{error}</p>}
           </div>
-
-          {activeTab === 'profile' && (
-            <div className="space-y-6 animate-fadeIn">
-              <div className="flex items-center space-x-4">
-                <FaUser className="text-blue-300 text-2xl" />
-                <div>
-                  <p className="text-sm text-gray-400">Nome de usuário</p>
-                  <p className="text-lg font-semibold">{userData.username || 'Não informado'}</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <FaEnvelope className="text-blue-300 text-2xl" />
-                <div>
-                  <p className="text-sm text-gray-400">Email</p>
-                  <p className="text-lg font-semibold">{userData.email}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'security' && (
-            <div className="space-y-6 animate-fadeIn">
-              <div className="bg-gray-800 p-6 rounded-lg">
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <FaLock className="mr-2" /> Alterar Senha
-                </h2>
-                <input
-                  type="password"
-                  placeholder="Senha Atual"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full rounded-lg border border-gray-600 px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-gray-700"
-                />
-                <input
-                  type="password"
-                  placeholder="Nova Senha"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-lg border border-gray-600 px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-gray-700"
-                />
-                <div className="flex space-x-4">
-                  <button
-                    onClick={handleChangePassword}
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
-                  >
-                    Confirmar Alteração
-                  </button>
-                  <button
-                    onClick={handleResetPassword}
-                    className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-opacity-50"
-                  >
-                    Redefinir por Email
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-gray-800 p-6 rounded-lg">
-                <h2 className="text-xl font-semibold mb-4 flex items-center text-red-500">
-                  <FaTrash className="mr-2" /> Excluir Conta
-                </h2>
-                <p className="mb-4 text-gray-400">Esta ação é irreversível. Todos os seus dados serão permanentemente removidos.</p>
-                <button
-                  onClick={handleDeleteAccount}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-                >
-                  Excluir Minha Conta
-                </button>
-              </div>
-            </div>
-          )}
-
-          {error && <p className="text-red-400 mt-4 text-center">{error}</p>}
-        </div>
-      ) : (
-        <p className="text-xl">Nenhum dado do usuário encontrado.</p>
-      )}
+        ) : (
+          <p className="text-xl">Nenhum dado do usuário encontrado.</p>
+        )}
+      </div>
+      <Footer />
     </div>
   );
 };

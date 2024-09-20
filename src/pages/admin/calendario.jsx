@@ -8,6 +8,7 @@ import app from '../../lib/firebase';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { FaArrowLeft, FaCalendarAlt } from 'react-icons/fa';
+import Footer from '../../components/Footer';
 
 const Calendario = () => {
     const [role, setRole] = useState(null);
@@ -48,9 +49,9 @@ const Calendario = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white"
+            className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white flex flex-col"
         >
-            <div className="container mx-auto px-4 py-4 sm:py-8">
+            <div className="container mx-auto px-4 py-4 sm:py-8 flex-grow">
                 <header className="mb-4 sm:mb-8">
                     <div className="flex flex-col sm:flex-row justify-between items-center">
                         <h1 className="text-2xl sm:text-4xl font-bold flex items-center mb-4 sm:mb-0">
@@ -73,11 +74,8 @@ const Calendario = () => {
                 >
                     <CalendarioConfig />
                 </motion.div>
-
-                <footer className="mt-4 sm:mt-8 text-center text-gray-400 text-sm">
-                    <p>&copy; 2024 Ariel Aio. Todos os direitos reservados.</p>
-                </footer>
             </div>
+            <Footer />
         </motion.div>
     );
 };
