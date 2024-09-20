@@ -6,6 +6,8 @@ import { useRouter } from 'next/router';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import moment from 'moment-timezone';
+import { FaMoneyBillWave, FaChartLine, FaCalendarCheck, FaChartBar } from 'react-icons/fa';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -39,17 +41,31 @@ function Dashboard() {
 
     const fetchAppointments = async () => {
         const appointmentsSnapshot = await getDocs(collection(db, 'agendamentos'));
-        const appointmentsData = appointmentsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                ...data,
-                id: doc.id,
-                preco: data.preco ? parseFloat(data.preco.replace('R$', '').replace(',', '.')) : 0
-            };
-        });
+        const thirtyDaysAgo = moment().subtract(30, 'days').startOf('day');
+        
+        const appointmentsData = appointmentsSnapshot.docs
+            .map(doc => {
+                const data = doc.data();
+                const appointmentDate = moment(data.dataAgendamento.toDate());
+                return {
+                    ...data,
+                    id: doc.id,
+                    preco: data.preco ? parseFloat(data.preco.replace('R$', '').replace(',', '.')) : 0,
+                    statusPagamento: data.statusPagamento || 'Pendente',
+                    dataAgendamento: appointmentDate
+                };
+            })
+            .filter(appointment => appointment.dataAgendamento.isAfter(thirtyDaysAgo));
+
         setAppointments(appointmentsData);
         setLoading(false);
     };
+
+    const currentRevenue = appointments
+        .filter(appointment => appointment.statusPagamento === 'Pago')
+        .reduce((sum, appointment) => sum + appointment.preco, 0);
+
+    const estimatedRevenue = appointments.reduce((sum, appointment) => sum + appointment.preco, 0);
 
     const totalRevenue = appointments.reduce((sum, appointment) => sum + appointment.preco, 0);
     const averagePrice = totalRevenue / appointments.length || 0;
@@ -72,6 +88,7 @@ function Dashboard() {
 
     const chartOptions = {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: {
                 position: 'top',
@@ -98,25 +115,38 @@ function Dashboard() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white p-4 md:p-8">
-            <h1 className="text-3xl font-bold mb-6 text-center">Dashboard</h1>
+            <h1 className="text-3xl font-bold mb-6 text-center flex items-center justify-center">
+                <FaChartLine className="mr-2" /> Dashboard
+            </h1>
             
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                    <h2 className="text-xl font-semibold mb-2">Receita Total</h2>
-                    <p className="text-3xl font-bold">R$ {totalRevenue.toFixed(2)}</p>
+                    <h2 className="text-xl font-semibold mb-2 flex items-center">
+                        <FaMoneyBillWave className="mr-2 text-green-400" /> Faturamento Atual
+                    </h2>
+                    <p className="text-3xl font-bold">R$ {currentRevenue.toFixed(2)}</p>
                 </div>
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                    <h2 className="text-xl font-semibold mb-2">Preço Médio</h2>
-                    <p className="text-3xl font-bold">R$ {averagePrice.toFixed(2)}</p>
+                    <h2 className="text-xl font-semibold mb-2 flex items-center">
+                        <FaChartLine className="mr-2 text-blue-400" /> Faturamento Estimado
+                    </h2>
+                    <p className="text-3xl font-bold">R$ {estimatedRevenue.toFixed(2)}</p>
                 </div>
                 <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                    <h2 className="text-xl font-semibold mb-2">Total de Agendamentos</h2>
+                    <h2 className="text-xl font-semibold mb-2 flex items-center">
+                        <FaCalendarCheck className="mr-2 text-yellow-400" /> Total de Agendamentos
+                    </h2>
                     <p className="text-3xl font-bold">{appointments.length}</p>
                 </div>
             </div>
 
-            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <Bar data={chartData} options={chartOptions} />
+            <div className="bg-gray-800 p-4 md:p-6 rounded-lg shadow-lg">
+                <h2 className="text-xl font-semibold mb-4 flex items-center">
+                    <FaChartBar className="mr-2 text-purple-400" /> Agendamentos por Tipo de Serviço
+                </h2>
+                <div className="w-full h-[300px] md:h-[400px]">
+                    <Bar data={chartData} options={chartOptions} />
+                </div>
             </div>
         </div>
     );

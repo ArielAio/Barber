@@ -50,11 +50,11 @@ const Calendario = () => {
             exit={{ opacity: 0 }}
             className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white"
         >
-            <div className="container mx-auto px-4 py-8">
-                <header className="mb-8">
-                    <div className="flex justify-between items-center">
-                        <h1 className="text-4xl font-bold flex items-center">
-                            <FaCalendarAlt className="mr-4" />
+            <div className="container mx-auto px-4 py-4 sm:py-8">
+                <header className="mb-4 sm:mb-8">
+                    <div className="flex flex-col sm:flex-row justify-between items-center">
+                        <h1 className="text-2xl sm:text-4xl font-bold flex items-center mb-4 sm:mb-0">
+                            <FaCalendarAlt className="mr-2 sm:mr-4" />
                             Calendário de Agendamentos
                         </h1>
                         <Link href="/admin" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out flex items-center">
@@ -62,7 +62,7 @@ const Calendario = () => {
                             Voltar
                         </Link>
                     </div>
-                    <p className="mt-2 text-gray-300">Gerencie seus agendamentos de forma eficiente</p>
+                    <p className="mt-2 text-gray-300 text-sm sm:text-base">Gerencie seus agendamentos de forma eficiente</p>
                 </header>
 
                 <motion.div
@@ -74,7 +74,7 @@ const Calendario = () => {
                     <CalendarioConfig />
                 </motion.div>
 
-                <footer className="mt-8 text-center text-gray-400">
+                <footer className="mt-4 sm:mt-8 text-center text-gray-400 text-sm">
                     <p>&copy; 2024 Ariel Aio. Todos os direitos reservados.</p>
                 </footer>
             </div>
