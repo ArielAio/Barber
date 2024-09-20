@@ -5,8 +5,8 @@ import Link from 'next/link';
 import app from '../../../lib/firebase';
 import moment from 'moment-timezone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaCalendarAlt, FaClock, FaTimes } from 'react-icons/fa';
-import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { FaArrowLeft, FaCalendarAlt, FaClock, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { format, addMonths, subMonths, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 
@@ -32,21 +32,27 @@ function EditarCliente() {
     const fetchCliente = async () => {
         if (!id) return;
 
-        const clienteRef = doc(db, 'agendamentos', id);
-        const clienteDoc = await getDoc(clienteRef);
+        try {
+            const clienteRef = doc(db, 'agendamentos', id);
+            const clienteDoc = await getDoc(clienteRef);
 
-        if (clienteDoc.exists()) {
-            const data = clienteDoc.data();
-            const dataHora = data.dataAgendamento.toDate();
-            setCliente(data);
-            setNome(data.nome);
-            setEmail(data.email);
-            setDataAgendamento(moment(dataHora).format('YYYY-MM-DD'));
-            setHoraAgendamento(moment(dataHora).format('HH:mm'));
-            setSelectedDate(dataHora);
-            setCurrentMonth(dataHora);
+            if (clienteDoc.exists()) {
+                const data = clienteDoc.data();
+                const dataHora = data.dataAgendamento.toDate();
+                setCliente(data);
+                setNome(data.nome);
+                setEmail(data.email);
+                setDataAgendamento(moment(dataHora).format('YYYY-MM-DD'));
+                setHoraAgendamento(moment(dataHora).format('HH:mm'));
+                setSelectedDate(dataHora);
+                setCurrentMonth(dataHora);
+            }
+        } catch (error) {
+            console.error("Erro ao buscar cliente:", error);
+            setError("Erro ao carregar os dados do cliente.");
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
     useEffect(() => {
@@ -94,11 +100,24 @@ function EditarCliente() {
         }
     }, [selectedDate, generateHorarios]);
 
-    const generateCalendarDays = () => {
+    const generateCalendarDays = useCallback(() => {
         const start = startOfMonth(currentMonth);
         const end = endOfMonth(currentMonth);
-        return eachDayOfInterval({ start, end });
-    };
+        const days = eachDayOfInterval({ start, end });
+
+        // Adicionar dias do mês anterior para preencher a primeira semana
+        const firstDayOfWeek = getDay(start);
+        for (let i = 1; i <= firstDayOfWeek; i++) {
+            days.unshift(new Date(start.getFullYear(), start.getMonth(), -i + 1));
+        }
+
+        // Adicionar dias do próximo mês para preencher a última semana
+        while (days.length % 7 !== 0) {
+            days.push(new Date(end.getFullYear(), end.getMonth() + 1, days.length - end.getDate() + 1));
+        }
+
+        return days;
+    }, [currentMonth]);
 
     const handleDateSelect = (date) => {
         setSelectedDate(date);
@@ -114,11 +133,11 @@ function EditarCliente() {
     };
 
     const handlePrevMonth = () => {
-        setCurrentMonth(prevMonth => addDays(prevMonth, -30));
+        setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
     };
 
     const handleNextMonth = () => {
-        setCurrentMonth(prevMonth => addDays(prevMonth, 30));
+        setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
     };
 
     const handleSubmit = async (event) => {
@@ -237,7 +256,7 @@ function EditarCliente() {
                         exit={{ opacity: 0 }}
                     >
                         <motion.div
-                            className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+                            className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
@@ -246,14 +265,17 @@ function EditarCliente() {
                                 <h2 className="text-2xl font-bold text-gray-800">
                                     {modalStep === 'date' ? 'Selecione a Data' : 'Selecione o Horário'}
                                 </h2>
-                                <button onClick={() => {
-                                    if (modalStep === 'time') {
-                                        setModalStep('date');
-                                    } else {
-                                        setShowModal(false);
-                                        setModalStep('date');
-                                    }
-                                }} className="text-gray-600 hover:text-gray-800">
+                                <button 
+                                    onClick={() => {
+                                        if (modalStep === 'time') {
+                                            setModalStep('date');
+                                        } else {
+                                            setShowModal(false);
+                                            setModalStep('date');
+                                        }
+                                    }} 
+                                    className="text-gray-600 hover:text-gray-800 transition-colors"
+                                >
                                     {modalStep === 'time' ? <FaArrowLeft size={24} /> : <FaTimes size={24} />}
                                 </button>
                             </div>
@@ -261,34 +283,45 @@ function EditarCliente() {
                             {modalStep === 'date' && (
                                 <div>
                                     <div className="flex justify-between items-center mb-4">
-                                        <button onClick={handlePrevMonth} className="text-blue-500 hover:text-blue-700">
-                                            &lt; Mês anterior
+                                        <button onClick={handlePrevMonth} className="text-blue-500 hover:text-blue-700 transition-colors">
+                                            <FaChevronLeft size={24} />
                                         </button>
                                         <h3 className="text-lg font-semibold text-gray-700">
                                             {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
                                         </h3>
-                                        <button onClick={handleNextMonth} className="text-blue-500 hover:text-blue-700">
-                                            Próximo mês &gt;
+                                        <button onClick={handleNextMonth} className="text-blue-500 hover:text-blue-700 transition-colors">
+                                            <FaChevronRight size={24} />
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-7 gap-2">
-                                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                                    <div className="grid grid-cols-7 gap-2 mb-4">
+                                        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(day => (
                                             <div key={day} className="text-center font-semibold text-gray-600">{day}</div>
                                         ))}
-                                        {generateCalendarDays().map((date, index) => (
-                                            <button
-                                                key={date.toISOString()}
-                                                onClick={() => !isSunday(date) && handleDateSelect(date)}
-                                                disabled={isSunday(date) || date < new Date()}
-                                                className={`p-2 rounded ${
-                                                    isSunday(date) || date < new Date()
-                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                        : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                                                }`}
-                                            >
-                                                {format(date, 'd')}
-                                            </button>
-                                        ))}
+                                    </div>
+                                    <div className="grid grid-cols-7 gap-2">
+                                        {generateCalendarDays().map((date, index) => {
+                                            const isDisabled = isSunday(date);
+                                            const isCurrentMonth = isSameMonth(date, currentMonth);
+                                            return (
+                                                <button
+                                                    key={date.toISOString()}
+                                                    onClick={() => !isDisabled && handleDateSelect(date)}
+                                                    disabled={isDisabled}
+                                                    className={`
+                                                        p-2 rounded-full text-sm
+                                                        ${isDisabled 
+                                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                                            : isCurrentMonth
+                                                                ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                                                : 'bg-gray-100 text-gray-400'
+                                                        }
+                                                        ${isToday(date) ? 'ring-2 ring-blue-500' : ''}
+                                                    `}
+                                                >
+                                                    {format(date, 'd')}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -296,7 +329,7 @@ function EditarCliente() {
                             {modalStep === 'time' && (
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-700 mb-4">
-                                        Horários disponíveis para {format(selectedDate, 'dd/MM/yyyy')}
+                                        Horários para {format(selectedDate, 'dd/MM/yyyy')}
                                     </h3>
                                     <div className="grid grid-cols-3 gap-2">
                                         {horarios.map(({ time, isOccupied }) => (
@@ -304,11 +337,13 @@ function EditarCliente() {
                                                 key={time}
                                                 onClick={() => !isOccupied && handleTimeSelect(time)}
                                                 disabled={isOccupied}
-                                                className={`p-2 rounded ${
-                                                    isOccupied
+                                                className={`
+                                                    p-2 rounded-md text-sm font-medium
+                                                    ${isOccupied
                                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                         : 'bg-blue-500 text-white hover:bg-blue-600'
-                                                }`}
+                                                    }
+                                                `}
                                             >
                                                 {time}
                                             </button>

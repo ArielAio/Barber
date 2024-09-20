@@ -8,9 +8,9 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut, FaTimes } from 'react-icons/fa';
-import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import ptBR from 'date-fns/locale/pt-BR';
+import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { format, addMonths, subMonths, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 function Cadastro() {
     const router = useRouter();
@@ -25,7 +25,7 @@ function Cadastro() {
     const [preco, setPreco] = useState('');
     const [horarios, setHorarios] = useState([]);
     const [showModal, setShowModal] = useState(false);
-    const [modalStep, setModalStep] = useState('date'); // 'date' or 'time'
+    const [modalStep, setModalStep] = useState('date');
     const [selectedDate, setSelectedDate] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -78,11 +78,11 @@ function Cadastro() {
     };
 
     const generateHorarios = useCallback(async () => {
-        if (!data) return; // Add this check
+        if (!data) return;
 
-        const start = 9; // 9:00
-        const end = 18; // 18:00
-        const interval = 30; // 30 minutes
+        const start = 9;
+        const end = 18;
+        const interval = 30;
         const generatedHorarios = [];
 
         for (let hour = start; hour < end; hour++) {
@@ -92,7 +92,6 @@ function Cadastro() {
             }
         }
 
-        // Fetch existing appointments for the selected date
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         const agendamentos = agendamentosSnapshot.docs.map(doc => doc.data());
 
@@ -110,17 +109,35 @@ function Cadastro() {
         });
 
         setHorarios(availableHorarios);
-        console.log('Generated horarios:', availableHorarios); // Add this for debugging
     }, [data, db]);
 
     useEffect(() => {
         generateHorarios();
     }, [generateHorarios]);
 
-    const generateCalendarDays = () => {
+    const generateCalendarDays = useCallback(() => {
         const start = startOfMonth(currentMonth);
         const end = endOfMonth(currentMonth);
-        return eachDayOfInterval({ start, end });
+        const days = eachDayOfInterval({ start, end });
+
+        const firstDayOfWeek = getDay(start);
+        for (let i = 1; i <= firstDayOfWeek; i++) {
+            days.unshift(new Date(start.getFullYear(), start.getMonth(), -i + 1));
+        }
+
+        while (days.length % 7 !== 0) {
+            days.push(new Date(end.getFullYear(), end.getMonth() + 1, days.length - end.getDate() + 1));
+        }
+
+        return days;
+    }, [currentMonth]);
+
+    const handlePrevMonth = () => {
+        setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
     };
 
     const handleDateSelect = (date) => {
@@ -134,14 +151,6 @@ function Cadastro() {
         setHorario(time);
         setShowModal(false);
         setModalStep('date');
-    };
-
-    const handlePrevMonth = () => {
-        setCurrentMonth(prevMonth => addDays(prevMonth, -30));
-    };
-
-    const handleNextMonth = () => {
-        setCurrentMonth(prevMonth => addDays(prevMonth, 30));
     };
 
     const handleSubmit = async (event) => {
@@ -282,7 +291,7 @@ function Cadastro() {
                         exit={{ opacity: 0 }}
                     >
                         <motion.div
-                            className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+                            className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
@@ -306,34 +315,45 @@ function Cadastro() {
                             {modalStep === 'date' && (
                                 <div>
                                     <div className="flex justify-between items-center mb-4">
-                                        <button onClick={handlePrevMonth} className="text-blue-500 hover:text-blue-700">
-                                            &lt; Mês anterior
+                                        <button onClick={handlePrevMonth} className="text-blue-500 hover:text-blue-700 transition-colors">
+                                            <FaChevronLeft size={24} />
                                         </button>
                                         <h3 className="text-lg font-semibold text-gray-700">
                                             {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
                                         </h3>
-                                        <button onClick={handleNextMonth} className="text-blue-500 hover:text-blue-700">
-                                            Próximo mês &gt;
+                                        <button onClick={handleNextMonth} className="text-blue-500 hover:text-blue-700 transition-colors">
+                                            <FaChevronRight size={24} />
                                         </button>
                                     </div>
-                                    <div className="grid grid-cols-7 gap-2">
-                                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                                    <div className="grid grid-cols-7 gap-2 mb-4">
+                                        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(day => (
                                             <div key={day} className="text-center font-semibold text-gray-600">{day}</div>
                                         ))}
-                                        {generateCalendarDays().map((date, index) => (
-                                            <button
-                                                key={date.toISOString()}
-                                                onClick={() => !isSunday(date) && handleDateSelect(date)}
-                                                disabled={isSunday(date) || date < new Date()}
-                                                className={`p-2 rounded ${
-                                                    isSunday(date) || date < new Date()
-                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                        : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                                                }`}
-                                            >
-                                                {format(date, 'd')}
-                                            </button>
-                                        ))}
+                                    </div>
+                                    <div className="grid grid-cols-7 gap-2">
+                                        {generateCalendarDays().map((date, index) => {
+                                            const isDisabled = isSunday(date);
+                                            const isCurrentMonth = isSameMonth(date, currentMonth);
+                                            return (
+                                                <button
+                                                    key={date.toISOString()}
+                                                    onClick={() => !isDisabled && handleDateSelect(date)}
+                                                    disabled={isDisabled}
+                                                    className={`
+                                                        p-2 rounded-full text-sm
+                                                        ${isDisabled 
+                                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                                            : isCurrentMonth
+                                                                ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                                                : 'bg-gray-100 text-gray-400'
+                                                        }
+                                                        ${isToday(date) ? 'ring-2 ring-blue-500' : ''}
+                                                    `}
+                                                >
+                                                    {format(date, 'd')}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -341,7 +361,7 @@ function Cadastro() {
                             {modalStep === 'time' && (
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-700 mb-4">
-                                        Horários disponíveis para {format(selectedDate, 'dd/MM/yyyy')}
+                                        Horários para {format(selectedDate, 'dd/MM/yyyy')}
                                     </h3>
                                     <div className="grid grid-cols-3 gap-2">
                                         {horarios.map(({ time, isOccupied }) => (
@@ -349,11 +369,13 @@ function Cadastro() {
                                                 key={time}
                                                 onClick={() => !isOccupied && handleTimeSelect(time)}
                                                 disabled={isOccupied}
-                                                className={`p-2 rounded ${
-                                                    isOccupied
+                                                className={`
+                                                    p-2 rounded-md text-sm font-medium
+                                                    ${isOccupied
                                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                                         : 'bg-blue-500 text-white hover:bg-blue-600'
-                                                }`}
+                                                    }
+                                                `}
                                             >
                                                 {time}
                                             </button>

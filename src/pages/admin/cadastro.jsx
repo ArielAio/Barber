@@ -8,9 +8,9 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaCalendarAlt, FaClock, FaUser, FaEnvelope, FaArrowLeft, FaCut, FaTimes } from 'react-icons/fa';
-import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
-import ptBR from 'date-fns/locale/pt-BR';
+import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut, FaTimes, FaChevronLeft, FaChevronRight, FaUser, FaEnvelope } from 'react-icons/fa';
+import { format, addMonths, subMonths, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 function Cadastro() {
     const router = useRouter();
@@ -63,9 +63,43 @@ function Cadastro() {
         return () => unsubscribe();
     }, [auth, db, router]);
 
-    useEffect(() => {
-        setPreco(servicoPrecosMap[servico] || '');
-    }, [servico]);
+    const generateCalendarDays = useCallback(() => {
+        const start = startOfMonth(currentMonth);
+        const end = endOfMonth(currentMonth);
+        const days = eachDayOfInterval({ start, end });
+
+        const firstDayOfWeek = getDay(start);
+        for (let i = 1; i <= firstDayOfWeek; i++) {
+            days.unshift(new Date(start.getFullYear(), start.getMonth(), -i + 1));
+        }
+
+        while (days.length % 7 !== 0) {
+            days.push(new Date(end.getFullYear(), end.getMonth() + 1, days.length - end.getDate() + 1));
+        }
+
+        return days;
+    }, [currentMonth]);
+
+    const handlePrevMonth = () => {
+        setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
+    };
+
+    const handleDateSelect = (date) => {
+        setSelectedDate(date);
+        setData(format(date, 'yyyy-MM-dd'));
+        setModalStep('time');
+        generateHorarios();
+    };
+
+    const handleTimeSelect = (time) => {
+        setHorario(time);
+        setShowModal(false);
+        setModalStep('date');
+    };
 
     const generateHorarios = useCallback(async () => {
         if (!data) return;
@@ -104,33 +138,6 @@ function Cadastro() {
     useEffect(() => {
         generateHorarios();
     }, [generateHorarios]);
-
-    const generateCalendarDays = () => {
-        const start = startOfMonth(currentMonth);
-        const end = endOfMonth(currentMonth);
-        return eachDayOfInterval({ start, end });
-    };
-
-    const handleDateSelect = (date) => {
-        setSelectedDate(date);
-        setData(format(date, 'yyyy-MM-dd'));
-        setModalStep('time');
-        generateHorarios();
-    };
-
-    const handleTimeSelect = (time) => {
-        setHorario(time);
-        setShowModal(false);
-        setModalStep('date');
-    };
-
-    const handlePrevMonth = () => {
-        setCurrentMonth(prevMonth => addDays(prevMonth, -30));
-    };
-
-    const handleNextMonth = () => {
-        setCurrentMonth(prevMonth => addDays(prevMonth, 30));
-    };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -215,28 +222,42 @@ function Cadastro() {
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                    <div className="relative">
-                        <FaUser className="absolute top-3 left-3 text-gray-400" />
-                        <input
-                            type="text"
-                            id="nome"
-                            placeholder="Nome do cliente"
-                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                            value={nome}
-                            onChange={(e) => setNome(e.target.value)}
-                        />
+                    <div>
+                        <label htmlFor="nome" className="block text-sm font-medium text-gray-300">Nome</label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FaUser className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <input
+                                type="text"
+                                name="nome"
+                                id="nome"
+                                className="bg-gray-700 text-white block w-full pl-10 pr-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Nome do cliente"
+                                value={nome}
+                                onChange={(e) => setNome(e.target.value)}
+                                required
+                            />
+                        </div>
                     </div>
 
-                    <div className="relative">
-                        <FaEnvelope className="absolute top-3 left-3 text-gray-400" />
-                        <input
-                            type="email"
-                            id="email"
-                            placeholder="Email do cliente"
-                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-300">Email</label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FaEnvelope className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <input
+                                type="email"
+                                name="email"
+                                id="email"
+                                className="bg-gray-700 text-white block w-full pl-10 pr-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="email@exemplo.com"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
                     </div>
 
                     <button
@@ -247,26 +268,7 @@ function Cadastro() {
                         {data && horario ? `${format(new Date(data), 'dd/MM/yyyy')} às ${horario}` : 'Selecionar Data e Horário'}
                     </button>
 
-                    <div className="relative">
-                        <FaCut className="absolute top-3 left-3 text-gray-400" />
-                        <select
-                            id="servico"
-                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                            value={servico}
-                            onChange={(e) => setServico(e.target.value)}
-                        >
-                            <option value="">Selecione o serviço</option>
-                            <option value="corte_cabelo">Corte de Cabelo - R$ 35,00</option>
-                            <option value="corte_barba">Corte de Barba - R$ 25,00</option>
-                            <option value="corte_cabelo_barba">Corte de Cabelo e Barba - R$ 50,00</option>
-                        </select>
-                    </div>
-
-                    {preco && (
-                        <div className="text-center text-lg font-semibold">
-                            Preço: {preco}
-                        </div>
-                    )}
+                    {/* ... outros campos do formulário ... */}
 
                     <motion.button
                         type="submit"
@@ -319,33 +321,39 @@ function Cadastro() {
                                 <div>
                                     <div className="flex justify-between items-center mb-4">
                                         <button onClick={handlePrevMonth} className="text-blue-500 hover:text-blue-700">
-                                            &lt; Mês anterior
+                                            <FaChevronLeft size={24} />
                                         </button>
                                         <h3 className="text-lg font-semibold text-gray-700">
                                             {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
                                         </h3>
                                         <button onClick={handleNextMonth} className="text-blue-500 hover:text-blue-700">
-                                            Próximo mês &gt;
+                                            <FaChevronRight size={24} />
                                         </button>
                                     </div>
                                     <div className="grid grid-cols-7 gap-2">
-                                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                                        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(day => (
                                             <div key={day} className="text-center font-semibold text-gray-600">{day}</div>
                                         ))}
-                                        {generateCalendarDays().map((date, index) => (
-                                            <button
-                                                key={date.toISOString()}
-                                                onClick={() => !isSunday(date) && handleDateSelect(date)}
-                                                disabled={isSunday(date) || date < new Date()}
-                                                className={`p-2 rounded ${
-                                                    isSunday(date) || date < new Date()
-                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                        : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                                                }`}
-                                            >
-                                                {format(date, 'd')}
-                                            </button>
-                                        ))}
+                                        {generateCalendarDays().map((date, index) => {
+                                            const isDisabled = isSunday(date);
+                                            const isCurrentMonth = isSameMonth(date, currentMonth);
+                                            return (
+                                                <button
+                                                    key={date.toISOString()}
+                                                    onClick={() => !isDisabled && handleDateSelect(date)}
+                                                    disabled={isDisabled}
+                                                    className={`p-2 rounded ${
+                                                        isDisabled
+                                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                            : isCurrentMonth
+                                                                ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                                                : 'bg-gray-100 text-gray-400'
+                                                    } ${isToday(date) ? 'ring-2 ring-blue-500' : ''}`}
+                                                >
+                                                    {format(date, 'd')}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
