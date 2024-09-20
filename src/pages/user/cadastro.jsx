@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { getFirestore, collection, addDoc, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import app from '../../lib/firebase';
 import moment from 'moment-timezone';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut } from 'react-icons/fa';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subMonths, addMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subMonths, addMonths, parseISO, isEqual } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import DateTimeModal from '../../components/DateTimeModal';
 
@@ -27,8 +27,11 @@ function Cadastro() {
     const [horarios, setHorarios] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [modalStep, setModalStep] = useState('date');
-    const [selectedDate, setSelectedDate] = useState(null);
+    const [selectedDate, setSelectedDate] = useState(new Date());
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [scheduledTimes, setScheduledTimes] = useState([]);
+    const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
+    const [isLoadingScheduledTimes, setIsLoadingScheduledTimes] = useState(true);
 
     const servicoPrecosMap = {
         corte_cabelo: 'R$ 35,00',
@@ -78,44 +81,6 @@ function Cadastro() {
         return new Date().toISOString().split('T')[0];
     };
 
-    const generateHorarios = useCallback(async () => {
-        if (!data) return;
-
-        const start = 9;
-        const end = 18;
-        const interval = 30;
-        const generatedHorarios = [];
-
-        for (let hour = start; hour < end; hour++) {
-            for (let minute = 0; minute < 60; minute += interval) {
-                const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                generatedHorarios.push(time);
-            }
-        }
-
-        const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
-        const agendamentos = agendamentosSnapshot.docs.map(doc => doc.data());
-
-        const availableHorarios = generatedHorarios.map(time => {
-            const [hour, minute] = time.split(':');
-            const dateTime = new Date(data);
-            dateTime.setHours(parseInt(hour), parseInt(minute));
-
-            const isOccupied = agendamentos.some(agendamento => {
-                const agendamentoDate = agendamento.dataAgendamento.toDate();
-                return agendamentoDate.getTime() === dateTime.getTime();
-            });
-
-            return { time, isOccupied };
-        });
-
-        setHorarios(availableHorarios);
-    }, [data, db]);
-
-    useEffect(() => {
-        generateHorarios();
-    }, [generateHorarios]);
-
     const generateCalendarDays = useCallback(() => {
         const start = startOfMonth(currentMonth);
         const end = endOfMonth(currentMonth);
@@ -133,25 +98,88 @@ function Cadastro() {
         return days;
     }, [currentMonth]);
 
-    const handlePrevMonth = () => {
-        setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
-    };
-
-    const handleNextMonth = () => {
-        setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
-    };
-
     const handleDateSelect = (date) => {
         setSelectedDate(date);
         setData(format(date, 'yyyy-MM-dd'));
         setModalStep('time');
-        generateHorarios();
+        fetchHorarios(date);
     };
 
     const handleTimeSelect = (time) => {
         setHorario(time);
         setShowModal(false);
         setModalStep('date');
+    };
+
+    const fetchHorarios = useCallback(async (date) => {
+        setIsLoadingHorarios(true);
+        try {
+            const db = getFirestore(app);
+            const appointmentsRef = collection(db, 'agendamentos');
+            const selectedDateString = format(date, 'yyyy-MM-dd');
+            const startOfDay = new Date(selectedDateString);
+            const endOfDay = new Date(selectedDateString);
+            endOfDay.setDate(endOfDay.getDate() + 1);
+
+            const q = query(
+                appointmentsRef, 
+                where("dataAgendamento", ">=", startOfDay),
+                where("dataAgendamento", "<", endOfDay)
+            );
+            const querySnapshot = await getDocs(q);
+
+            const occupiedSlots = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return format(data.dataAgendamento.toDate(), 'HH:mm');
+            });
+
+            const allSlots = [
+                "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+                "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+                "16:00", "16:30", "17:00", "17:30"
+            ];
+
+            const updatedHorarios = allSlots.map(time => ({
+                time,
+                isOccupied: occupiedSlots.includes(time)
+            }));
+
+            setHorarios(updatedHorarios);
+        } catch (error) {
+            console.error('Error fetching horarios:', error);
+            // Handle the error appropriately
+        } finally {
+            setIsLoadingHorarios(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchHorarios(selectedDate);
+    }, [selectedDate, fetchHorarios]);
+
+    useEffect(() => {
+        fetchScheduledTimes();
+    }, []);
+
+    const fetchScheduledTimes = async () => {
+        setIsLoadingScheduledTimes(true);
+        try {
+            const db = getFirestore(app);
+            const appointmentsRef = collection(db, 'agendamentos');
+            const querySnapshot = await getDocs(appointmentsRef);
+            
+            const times = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return data.dataAgendamento.toDate().toISOString();
+            });
+            
+            setScheduledTimes(times);
+        } catch (error) {
+            console.error('Error fetching scheduled times:', error);
+            // Handle the error appropriately
+        } finally {
+            setIsLoadingScheduledTimes(false);
+        }
     };
 
     const handleSubmit = async (event) => {
@@ -170,10 +198,21 @@ function Cadastro() {
             const timeZone = 'America/Sao_Paulo';
             const dataAgendamento = moment.tz(`${year}-${month}-${day} ${hour}:${minute}`, timeZone).toDate();
 
+            // Check if the appointment time is already taken
+            const isTimeSlotTaken = scheduledTimes.some(time => 
+                isEqual(parseISO(time), dataAgendamento)
+            );
+
+            if (isTimeSlotTaken) {
+                setError('Este horário já está agendado. Por favor, escolha outro horário.');
+                setIsLoading(false);
+                return;
+            }
+
             await addDoc(collection(db, "agendamentos"), {
                 nome,
                 email,
-                dataAgendamento,
+                dataAgendamento: Timestamp.fromDate(dataAgendamento),
                 horaAgendamento: horario,
                 statusPagamento: 'Pendente',
                 servico,
@@ -282,7 +321,13 @@ function Cadastro() {
                 Voltar para a página inicial
             </Link>
 
-            <DateTimeModal 
+            {(isLoadingScheduledTimes || isLoadingHorarios) && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+                </div>
+            )}
+
+            <DateTimeModal
                 showModal={showModal}
                 setShowModal={setShowModal}
                 modalStep={modalStep}
@@ -294,6 +339,9 @@ function Cadastro() {
                 handleTimeSelect={handleTimeSelect}
                 horarios={horarios}
                 generateCalendarDays={generateCalendarDays}
+                scheduledTimes={scheduledTimes}
+                isLoadingHorarios={isLoadingHorarios}
+                isLoadingScheduledTimes={isLoadingScheduledTimes}
             />
         </div>
     );

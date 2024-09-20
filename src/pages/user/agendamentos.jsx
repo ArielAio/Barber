@@ -8,7 +8,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCalendarAlt, FaEdit, FaTrashAlt, FaChevronLeft, FaClock, FaArrowLeft, FaTimes } from 'react-icons/fa';
-import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subDays } from 'date-fns';
+import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subDays, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import moment from 'moment-timezone';
 import DateTimeModal from '../../components/DateTimeModal';
@@ -31,6 +31,8 @@ function Agendamentos() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [horarios, setHorarios] = useState([]);
+  const [scheduledTimes, setScheduledTimes] = useState([]);
+  const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -60,6 +62,7 @@ function Agendamentos() {
 
   const generateHorarios = useCallback(async (date) => {
     if (!date) return;
+    setIsLoadingHorarios(true);
 
     const start = 9; // 9:00
     const end = 18; // 18:00
@@ -76,6 +79,11 @@ function Agendamentos() {
     const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
     const agendamentos = agendamentosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+    const scheduledTimesArray = agendamentos.map(agendamento => 
+      agendamento.dataAgendamento.toDate().toISOString()
+    );
+    setScheduledTimes(scheduledTimesArray);
+
     const availableHorarios = generatedHorarios.map(time => {
       const [hour, minute] = time.split(':');
       const dateTime = new Date(date);
@@ -91,6 +99,7 @@ function Agendamentos() {
     });
 
     setHorarios(availableHorarios);
+    setIsLoadingHorarios(false);
   }, [db, selectedAgendamento]);
 
   const generateCalendarDays = () => {
@@ -305,6 +314,8 @@ function Agendamentos() {
         handleTimeSelect={handleTimeSelect}
         horarios={horarios}
         generateCalendarDays={generateCalendarDays}
+        scheduledTimes={scheduledTimes}
+        isLoadingHorarios={isLoadingHorarios}
       />
 
       <AnimatePresence>

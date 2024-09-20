@@ -6,7 +6,7 @@ import app from '../../../lib/firebase';
 import moment from 'moment-timezone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaArrowLeft, FaCalendarAlt, FaClock, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { format, addMonths, subMonths, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay } from 'date-fns';
+import { format, addMonths, subMonths, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import DateTimeModal from '../../../components/DateTimeModal';
@@ -26,6 +26,8 @@ function EditarCliente() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [horarios, setHorarios] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [scheduledTimes, setScheduledTimes] = useState([]);
+    const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
 
     const db = getFirestore(app);
 
@@ -62,6 +64,7 @@ function EditarCliente() {
 
     const generateHorarios = useCallback(async (date) => {
         if (!date) return;
+        setIsLoadingHorarios(true);
 
         const start = 9; // 9:00
         const end = 18; // 18:00
@@ -78,6 +81,11 @@ function EditarCliente() {
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         const agendamentos = agendamentosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+        const scheduledTimesData = agendamentos.map(agendamento => 
+            agendamento.dataAgendamento.toDate().toISOString()
+        );
+        setScheduledTimes(scheduledTimesData);
+
         const availableHorarios = generatedHorarios.map(time => {
             const [hour, minute] = time.split(':');
             const dateTime = new Date(date);
@@ -93,6 +101,7 @@ function EditarCliente() {
         });
 
         setHorarios(availableHorarios);
+        setIsLoadingHorarios(false);
     }, [id, db]);
 
     useEffect(() => {
@@ -266,6 +275,8 @@ function EditarCliente() {
                 handleTimeSelect={handleTimeSelect}
                 horarios={horarios}
                 generateCalendarDays={generateCalendarDays}
+                scheduledTimes={scheduledTimes}
+                isLoadingHorarios={isLoadingHorarios}
             />
         </div>
     );

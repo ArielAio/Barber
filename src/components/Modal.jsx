@@ -43,6 +43,12 @@ const Modal = ({ isOpen, onClose, cliente }) => {
         },
     };
 
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
+    };
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -52,6 +58,7 @@ const Modal = ({ isOpen, onClose, cliente }) => {
                     initial="hidden"
                     animate="visible"
                     exit="hidden"
+                    onClick={handleBackdropClick}
                 >
                     <motion.div
                         className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden"

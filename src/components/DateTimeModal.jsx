@@ -1,6 +1,19 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, addMonths, subMonths, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay } from 'date-fns';
+import { 
+    format, 
+    addMonths, 
+    subMonths, 
+    isSunday, 
+    isSameMonth, 
+    isToday, 
+    isPast, 
+    startOfDay, 
+    isAfter, 
+    set, 
+    isEqual, 
+    parseISO 
+} from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { FaArrowLeft, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
@@ -15,7 +28,9 @@ function DateTimeModal({
     handleDateSelect,
     handleTimeSelect,
     horarios,
-    generateCalendarDays
+    generateCalendarDays,
+    scheduledTimes,
+    isLoadingHorarios // Add this new prop
 }) {
     const handleOverlayClick = (e) => {
         if (e.target === e.currentTarget) {
@@ -30,6 +45,14 @@ function DateTimeModal({
 
     const handleNextMonth = () => {
         setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
+    };
+
+    const isTimeScheduled = (date, time) => {
+        const [hours, minutes] = time.split(':');
+        const dateTime = set(date, { hours: parseInt(hours), minutes: parseInt(minutes) });
+        return scheduledTimes.some(scheduledTime => 
+            isEqual(parseISO(scheduledTime), dateTime)
+        );
     };
 
     return (
@@ -83,7 +106,7 @@ function DateTimeModal({
                                         <div key={day} className="text-center font-semibold text-gray-600">{day}</div>
                                     ))}
                                     {generateCalendarDays().map((date, index) => {
-                                        const isDisabled = isSunday(date);
+                                        const isDisabled = isSunday(date) || isPast(set(date, { hours: 23, minutes: 59, seconds: 59 }));
                                         const isCurrentMonth = isSameMonth(date, currentMonth);
                                         return (
                                             <button
@@ -111,22 +134,38 @@ function DateTimeModal({
                                 <h3 className="text-lg font-semibold text-gray-700 mb-4">
                                     Horários disponíveis para {format(selectedDate, 'dd/MM/yyyy')}
                                 </h3>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {horarios.map(({ time, isOccupied }) => (
-                                        <button
-                                            key={time}
-                                            onClick={() => !isOccupied && handleTimeSelect(time)}
-                                            disabled={isOccupied}
-                                            className={`p-2 rounded ${
-                                                isOccupied
-                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                                            }`}
-                                        >
-                                            {time}
-                                        </button>
-                                    ))}
-                                </div>
+                                {isLoadingHorarios ? (
+                                    <div className="flex justify-center items-center h-40">
+                                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {horarios.map(({ time, isOccupied }) => {
+                                            const [hours, minutes] = time.split(':');
+                                            const dateTime = set(selectedDate, { hours: parseInt(hours), minutes: parseInt(minutes) });
+                                            const now = new Date();
+                                            const isPastTime = isPast(dateTime);
+                                            const isScheduled = isTimeScheduled(selectedDate, time);
+                                            const isDisabled = isOccupied || isPastTime || isScheduled;
+                                            
+                                            return (
+                                                <button
+                                                    key={time}
+                                                    onClick={() => !isDisabled && handleTimeSelect(time)}
+                                                    disabled={isDisabled}
+                                                    className={`p-2 rounded ${
+                                                        isDisabled
+                                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                                                    }`}
+                                                >
+                                                    {time}
+                                                    {(isOccupied || isScheduled) && <span className="ml-2">🔒</span>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </motion.div>

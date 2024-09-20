@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { getFirestore, collection, addDoc, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import app from '../../lib/firebase';
 import moment from 'moment-timezone';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut, FaTimes, FaChevronLeft, FaChevronRight, FaUser, FaEnvelope } from 'react-icons/fa';
-import { format, addMonths, subMonths, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay } from 'date-fns';
+import { format, addMonths, subMonths, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay, parseISO, isEqual } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import DateTimeModal from '../../components/DateTimeModal';
 
@@ -29,6 +29,9 @@ function Cadastro() {
     const [modalStep, setModalStep] = useState('date');
     const [selectedDate, setSelectedDate] = useState(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [scheduledTimes, setScheduledTimes] = useState([]);
+    const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
+    const [isLoadingScheduledTimes, setIsLoadingScheduledTimes] = useState(true);
 
     const servicoPrecosMap = {
         corte_cabelo: 'R$ 35,00',
@@ -64,6 +67,31 @@ function Cadastro() {
         return () => unsubscribe();
     }, [auth, db, router]);
 
+    useEffect(() => {
+        fetchScheduledTimes();
+    }, []);
+
+    const fetchScheduledTimes = async () => {
+        setIsLoadingScheduledTimes(true);
+        try {
+            const db = getFirestore(app);
+            const appointmentsRef = collection(db, 'agendamentos');
+            const querySnapshot = await getDocs(appointmentsRef);
+            
+            const times = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return data.dataAgendamento.toDate().toISOString();
+            });
+            
+            setScheduledTimes(times);
+        } catch (error) {
+            console.error('Error fetching scheduled times:', error);
+            // Handle the error appropriately
+        } finally {
+            setIsLoadingScheduledTimes(false);
+        }
+    };
+
     const generateCalendarDays = useCallback(() => {
         const start = startOfMonth(currentMonth);
         const end = endOfMonth(currentMonth);
@@ -95,42 +123,54 @@ function Cadastro() {
     };
 
     const generateHorarios = useCallback(async () => {
-        if (!data) return;
+        if (!selectedDate) return;
 
-        const start = 9; // 9:00
-        const end = 18; // 18:00
-        const interval = 30; // 30 minutes
-        const generatedHorarios = [];
+        setIsLoadingHorarios(true);
+        try {
+            const db = getFirestore(app);
+            const appointmentsRef = collection(db, 'agendamentos');
+            const startOfDay = new Date(selectedDate);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(selectedDate);
+            endOfDay.setHours(23, 59, 59, 999);
 
-        for (let hour = start; hour < end; hour++) {
-            for (let minute = 0; minute < 60; minute += interval) {
-                const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                generatedHorarios.push(time);
-            }
-        }
+            const q = query(
+                appointmentsRef,
+                where("dataAgendamento", ">=", startOfDay),
+                where("dataAgendamento", "<=", endOfDay)
+            );
 
-        const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
-        const agendamentos = agendamentosSnapshot.docs.map(doc => doc.data());
-
-        const availableHorarios = generatedHorarios.map(time => {
-            const [hour, minute] = time.split(':');
-            const dateTime = new Date(data);
-            dateTime.setHours(parseInt(hour), parseInt(minute));
-
-            const isOccupied = agendamentos.some(agendamento => {
-                const agendamentoDate = agendamento.dataAgendamento.toDate();
-                return agendamentoDate.getTime() === dateTime.getTime();
+            const querySnapshot = await getDocs(q);
+            const occupiedSlots = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return format(data.dataAgendamento.toDate(), 'HH:mm');
             });
 
-            return { time, isOccupied };
-        });
+            const allSlots = [
+                "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+                "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+                "16:00", "16:30", "17:00", "17:30"
+            ];
 
-        setHorarios(availableHorarios);
-    }, [data, db]);
+            const availableHorarios = allSlots.map(time => ({
+                time,
+                isOccupied: occupiedSlots.includes(time)
+            }));
+
+            setHorarios(availableHorarios);
+        } catch (error) {
+            console.error('Error generating horarios:', error);
+            // Handle the error appropriately
+        } finally {
+            setIsLoadingHorarios(false);
+        }
+    }, [selectedDate]);
 
     useEffect(() => {
-        generateHorarios();
-    }, [generateHorarios]);
+        if (selectedDate) {
+            generateHorarios();
+        }
+    }, [selectedDate, generateHorarios]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -149,10 +189,21 @@ function Cadastro() {
             const timeZone = 'America/Sao_Paulo';
             const dataAgendamento = moment.tz(`${year}-${month}-${day} ${hour}:${minute}`, timeZone).toDate();
 
+            // Check if the appointment time is already taken
+            const isTimeSlotTaken = scheduledTimes.some(time => 
+                isEqual(parseISO(time), dataAgendamento)
+            );
+
+            if (isTimeSlotTaken) {
+                setError('Este horário já está agendado. Por favor, escolha outro horário.');
+                setLoading(false);
+                return;
+            }
+
             await addDoc(collection(db, "agendamentos"), {
                 nome,
                 email,
-                dataAgendamento,
+                dataAgendamento: Timestamp.fromDate(dataAgendamento),
                 horaAgendamento: horario,
                 statusPagamento: "Pendente",
                 servico,
@@ -291,6 +342,9 @@ function Cadastro() {
                 handleTimeSelect={handleTimeSelect}
                 horarios={horarios}
                 generateCalendarDays={generateCalendarDays}
+                scheduledTimes={scheduledTimes}
+                isLoadingHorarios={isLoadingHorarios}
+                isLoadingScheduledTimes={isLoadingScheduledTimes}
             />
         </div>
     );
