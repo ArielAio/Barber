@@ -105,6 +105,16 @@ function Agendamentos() {
     }
   };
 
+  // Add this function to map service IDs to friendly names
+  const getServiceName = (serviceId) => {
+    const serviceNames = {
+      corte_cabelo: 'Corte de Cabelo',
+      corte_barba: 'Corte de Barba',
+      corte_cabelo_barba: 'Corte de Cabelo e Barba'
+    };
+    return serviceNames[serviceId] || serviceId;
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -144,6 +154,8 @@ function Agendamentos() {
           </h2>
           <p className="mb-2 text-lg"><strong>Nome:</strong> {recentAgendamento.nome}</p>
           <p className="mb-2 text-lg"><strong>Data e Hora:</strong> {format(recentAgendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
+          <p className="mb-2 text-lg"><strong>Serviço:</strong> {getServiceName(recentAgendamento.servico)}</p>
+          <p className="mb-2 text-lg"><strong>Preço:</strong> {recentAgendamento.preco}</p>
         </motion.div>
       )}
 
@@ -214,6 +226,8 @@ function Agendamentos() {
                   <div>
                     <p className="text-lg font-semibold mb-1">{agendamento.nome}</p>
                     <p className="text-sm text-gray-300">{format(agendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
+                    <p className="text-sm text-gray-300">Serviço: {getServiceName(agendamento.servico)}</p>
+                    <p className="text-sm text-gray-300">Preço: {agendamento.preco}</p>
                   </div>
                   <div className="flex space-x-2">
                     <button

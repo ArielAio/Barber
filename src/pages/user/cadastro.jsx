@@ -8,7 +8,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaCalendarAlt, FaClock, FaArrowLeft } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut } from 'react-icons/fa';
 
 function Cadastro() {
     const router = useRouter();
@@ -19,6 +19,14 @@ function Cadastro() {
     const [isLoading, setIsLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [nome, setNome] = useState('');
+    const [servico, setServico] = useState('');
+    const [preco, setPreco] = useState('');
+
+    const servicoPrecosMap = {
+        corte_cabelo: 'R$ 35,00',
+        corte_barba: 'R$ 25,00',
+        corte_cabelo_barba: 'R$ 50,00'
+    };
 
     const auth = getAuth();
     const db = getFirestore(app);
@@ -47,6 +55,17 @@ function Cadastro() {
         return () => unsubscribe();
     }, [auth, db, router]);
 
+    useEffect(() => {
+        if (router.query.servico) {
+            setServico(router.query.servico);
+            setPreco(servicoPrecosMap[router.query.servico] || '');
+        }
+    }, [router.query.servico]);
+
+    useEffect(() => {
+        setPreco(servicoPrecosMap[servico] || '');
+    }, [servico]);
+
     const getCurrentDate = () => {
         return new Date().toISOString().split('T')[0];
     };
@@ -54,7 +73,7 @@ function Cadastro() {
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (!data || !horario) {
+        if (!data || !horario || !servico) {
             setError('Preencha todos os campos!');
             return;
         }
@@ -96,12 +115,16 @@ function Cadastro() {
                 email,
                 dataAgendamento,
                 horaAgendamento: horario,
-                statusPagamento: 'Pendente', // Add this line
+                statusPagamento: 'Pendente',
+                servico,
+                preco,
             });
 
             alert('Agendamento cadastrado com sucesso!');
             setData('');
             setHorario('');
+            setServico('');
+            setPreco('');
             setError('');
             router.push('/');
         } catch (error) {
@@ -162,7 +185,7 @@ function Cadastro() {
                                 className="w-full bg-gray-700 rounded-md border border-gray-600 px-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                                 value={data}
                                 onChange={(e) => setData(e.target.value)}
-                                min={getCurrentDate()} // Add this line
+                                min={getCurrentDate()}
                             />
                         </div>
 
@@ -176,6 +199,27 @@ function Cadastro() {
                                 onChange={(e) => setHorario(e.target.value)}
                             />
                         </div>
+
+                        <div className="relative">
+                            <FaCut className="absolute top-3 left-3 text-gray-400" />
+                            <select
+                                id="servico"
+                                className="w-full bg-gray-700 rounded-md border border-gray-600 px-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                                value={servico}
+                                onChange={(e) => setServico(e.target.value)}
+                            >
+                                <option value="">Selecione o serviço</option>
+                                <option value="corte_cabelo">Corte de Cabelo - R$ 35,00</option>
+                                <option value="corte_barba">Corte de Barba - R$ 25,00</option>
+                                <option value="corte_cabelo_barba">Corte de Cabelo e Barba - R$ 50,00</option>
+                            </select>
+                        </div>
+
+                        {preco && (
+                            <div className="text-center text-lg font-semibold">
+                                Preço: {preco}
+                            </div>
+                        )}
 
                         <button
                             type="submit"

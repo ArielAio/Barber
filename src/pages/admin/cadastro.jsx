@@ -8,7 +8,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaCalendarAlt, FaClock, FaUser, FaEnvelope, FaArrowLeft } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaUser, FaEnvelope, FaArrowLeft, FaCut } from 'react-icons/fa';
 
 function Cadastro() {
     const router = useRouter();
@@ -17,8 +17,16 @@ function Cadastro() {
     const [data, setData] = useState('');
     const [horario, setHorario] = useState('');
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [role, setRole] = useState(null);
+    const [servico, setServico] = useState('');
+    const [preco, setPreco] = useState('');
+
+    const servicoPrecosMap = {
+        corte_cabelo: 'R$ 35,00',
+        corte_barba: 'R$ 25,00',
+        corte_cabelo_barba: 'R$ 50,00'
+    };
 
     const auth = getAuth();
     const db = getFirestore(app);
@@ -42,20 +50,30 @@ function Cadastro() {
             } else {
                 router.push('/login');
             }
+            setLoading(false);
         });
 
         return () => unsubscribe();
     }, [auth, db, router]);
 
+    useEffect(() => {
+        setPreco(servicoPrecosMap[servico] || '');
+    }, [servico]);
+
+    const getCurrentDate = () => {
+        return new Date().toISOString().split('T')[0];
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (!nome || !email || !data || !horario) {
-            alert('Preencha todos os campos!');
+        if (!nome || !email || !data || !horario || !servico) {
+            setError('Preencha todos os campos!');
             return;
         }
 
         setLoading(true);
+        setError('');
 
         try {
             const [year, month, day] = data.split('-');
@@ -92,7 +110,9 @@ function Cadastro() {
                 email,
                 dataAgendamento,
                 horaAgendamento: horario,
-                statusPagamento: "Pendente", // Adicionando o status de pagamento
+                statusPagamento: "Pendente",
+                servico,
+                preco,
             });
 
             alert('Agendamento cadastrado com sucesso!');
@@ -100,17 +120,19 @@ function Cadastro() {
             setEmail('');
             setData('');
             setHorario('');
+            setServico('');
+            setPreco('');
             setError('');
             router.push('/admin');
         } catch (error) {
             console.error('Erro ao cadastrar Agendamento:', error);
-            alert('Erro ao cadastrar Agendamento. Tente novamente.');
+            setError('Erro ao cadastrar Agendamento. Tente novamente.');
         } finally {
             setLoading(false);
         }
     };
 
-    if (role === null) {
+    if (loading) {
         return <LoadingSpinner />;
     }
 
@@ -142,72 +164,91 @@ function Cadastro() {
                     </motion.p>
                 )}
 
-                {loading ? (
-                    <LoadingSpinner />
-                ) : (
-                    <motion.form
-                        className="space-y-6"
-                        onSubmit={handleSubmit}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5, delay: 0.3 }}
-                    >
-                        <div className="relative">
-                            <FaUser className="absolute top-3 left-3 text-gray-400" />
-                            <input
-                                type="text"
-                                id="nome"
-                                placeholder="Nome do cliente"
-                                className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                                value={nome}
-                                onChange={(e) => setNome(e.target.value)}
-                            />
-                        </div>
+                <motion.form
+                    className="space-y-6"
+                    onSubmit={handleSubmit}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                >
+                    <div className="relative">
+                        <FaUser className="absolute top-3 left-3 text-gray-400" />
+                        <input
+                            type="text"
+                            id="nome"
+                            placeholder="Nome do cliente"
+                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                            value={nome}
+                            onChange={(e) => setNome(e.target.value)}
+                        />
+                    </div>
 
-                        <div className="relative">
-                            <FaEnvelope className="absolute top-3 left-3 text-gray-400" />
-                            <input
-                                type="email"
-                                id="email"
-                                placeholder="Email do cliente"
-                                className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
+                    <div className="relative">
+                        <FaEnvelope className="absolute top-3 left-3 text-gray-400" />
+                        <input
+                            type="email"
+                            id="email"
+                            placeholder="Email do cliente"
+                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
 
-                        <div className="relative">
-                            <FaCalendarAlt className="absolute top-3 left-3 text-gray-400" />
-                            <input
-                                type="date"
-                                id="data"
-                                className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                                value={data}
-                                onChange={(e) => setData(e.target.value)}
-                            />
-                        </div>
+                    <div className="relative">
+                        <FaCalendarAlt className="absolute top-3 left-3 text-gray-400" />
+                        <input
+                            type="date"
+                            id="data"
+                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                            value={data}
+                            onChange={(e) => setData(e.target.value)}
+                            min={getCurrentDate()}
+                        />
+                    </div>
 
-                        <div className="relative">
-                            <FaClock className="absolute top-3 left-3 text-gray-400" />
-                            <input
-                                type="time"
-                                id="horario"
-                                className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                                value={horario}
-                                onChange={(e) => setHorario(e.target.value)}
-                            />
-                        </div>
+                    <div className="relative">
+                        <FaClock className="absolute top-3 left-3 text-gray-400" />
+                        <input
+                            type="time"
+                            id="horario"
+                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                            value={horario}
+                            onChange={(e) => setHorario(e.target.value)}
+                        />
+                    </div>
 
-                        <motion.button
-                            type="submit"
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                    <div className="relative">
+                        <FaCut className="absolute top-3 left-3 text-gray-400" />
+                        <select
+                            id="servico"
+                            className="w-full bg-gray-800 rounded-md border border-gray-700 pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                            value={servico}
+                            onChange={(e) => setServico(e.target.value)}
                         >
-                            Cadastrar Agendamento
-                        </motion.button>
-                    </motion.form>
-                )}
+                            <option value="">Selecione o serviço</option>
+                            <option value="corte_cabelo">Corte de Cabelo - R$ 35,00</option>
+                            <option value="corte_barba">Corte de Barba - R$ 25,00</option>
+                            <option value="corte_cabelo_barba">Corte de Cabelo e Barba - R$ 50,00</option>
+                        </select>
+                    </div>
+
+                    {preco && (
+                        <div className="text-center text-lg font-semibold">
+                            Preço: {preco}
+                        </div>
+                    )}
+
+                    <motion.button
+                        type="submit"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        disabled={loading}
+                    >
+                        {loading ? 'Cadastrando...' : 'Cadastrar Agendamento'}
+                    </motion.button>
+                </motion.form>
             </motion.div>
             
             <Link href="/admin" className="fixed bottom-6 left-6 bg-blue-600 hover:bg-blue-700 text-white font-bold p-4 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out shadow-lg">

@@ -19,11 +19,22 @@ function Agendamentos() {
     const [loading, setLoading] = useState(true);
     const [role, setRole] = useState(null);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [servicosData, setServicosData] = useState({});
     const router = useRouter();
     const auth = getAuth(app);
     const db = getFirestore(app);
 
     const fetchClientesPendentes = useCallback(async () => {
+        const settingsDoc = await getDoc(doc(db, 'barbearia', 'configuracao'));
+        if (settingsDoc.exists()) {
+            const data = settingsDoc.data();
+            setServicosData({
+                corte_cabelo: { nome: 'Corte de Cabelo', preco: data.precoCorte || '35,00' },
+                corte_barba: { nome: 'Corte de Barba', preco: data.precoBarba || '25,00' },
+                corte_cabelo_barba: { nome: 'Corte de Cabelo e Barba', preco: data.precoCabeloBarba || '50,00' },
+            });
+        }
+
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         let clientesData = agendamentosSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -37,7 +48,9 @@ function Agendamentos() {
                 email: data.email,
                 dataAgendamento: dataHoraLocal.format('DD/MM/YYYY'),
                 horaAgendamento: dataHoraLocal.format('HH:mm'),
-                statusPagamento: data.statusPagamento || 'Pendente', // Set default status to 'Pendente'
+                statusPagamento: data.statusPagamento || 'Pendente',
+                servico: data.servico,
+                preco: data.preco,
                 dataHoraUTC: dataHoraUTC
             };
         });
@@ -104,6 +117,25 @@ function Agendamentos() {
     const currentClientes = clientesPendentes.slice(indexOfFirstCliente, indexOfLastCliente);
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+    const getServiceName = (serviceId) => {
+        const serviceNames = {
+            corte_cabelo: 'Corte de Cabelo',
+            corte_barba: 'Corte de Barba',
+            corte_cabelo_barba: 'Corte de Cabelo e Barba'
+        };
+        return serviceNames[serviceId] || 'Serviço não especificado';
+    };
+
+    const formatPreco = (preco) => {
+        if (typeof preco === 'string') {
+            return preco.startsWith('R$') ? preco : `R$ ${preco}`;
+        }
+        if (typeof preco === 'number') {
+            return `R$ ${preco.toFixed(2).replace('.', ',')}`;
+        }
+        return 'Preço não especificado';
+    };
 
     if (role === null) {
         return <LoadingSpinner />;
@@ -177,6 +209,12 @@ function Agendamentos() {
                             <p className="text-gray-400 mb-1">{cliente.email}</p>
                             <p className="text-sm text-gray-500 mb-2">
                                 {cliente.dataAgendamento} • {cliente.horaAgendamento}
+                            </p>
+                            <p className="text-sm text-gray-400 mb-2">
+                                Serviço: {getServiceName(cliente.servico)}
+                            </p>
+                            <p className="text-sm text-gray-400 mb-2">
+                                Preço: {formatPreco(cliente.preco)}
                             </p>
                             <div className="flex justify-between items-center mt-4">
                                 <span className={`px-2 py-1 rounded-full text-sm ${

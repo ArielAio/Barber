@@ -5,15 +5,16 @@ import Link from 'next/link';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaCalendarPlus, FaListAlt, FaUserCircle, FaCut, FaInfoCircle } from 'react-icons/fa';
+import { FaCalendarPlus, FaListAlt, FaCut } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserHeader from '../components/UserHeader';
+
+const fetcher = (...args) => fetch(...args).then(res => res.json());
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [greeting, setGreeting] = useState('');
-  const [showTip, setShowTip] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -100,7 +101,7 @@ const Home = () => {
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-blue-300">
               {greeting}, {user?.username || 'Cliente'}!
             </h2>
-            <p className="text-lg sm:text-xl text-blue-200">
+            <p className="text-lg sm:text-xl text-blue-200 mb-8">
               Bem-vindo à nossa Barbearia! O que você gostaria de fazer hoje?
             </p>
           </motion.div>
@@ -109,66 +110,28 @@ const Home = () => {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-4xl"
           >
-            <motion.div variants={itemVariants}>
-              <Link href="/user/cadastro" className="flex items-center justify-center px-6 py-4 bg-blue-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-blue-700 transition-colors w-full group">
-                <FaCalendarPlus className="mr-3 text-xl group-hover:rotate-12 transition-transform" />
-                <span className="group-hover:underline">Agende Seu Corte</span>
+            <motion.div variants={itemVariants} className="col-span-1">
+              <Link href="/user/cadastro" className="flex flex-col items-center justify-center px-6 py-8 bg-blue-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-blue-700 transition-colors w-full h-full group">
+                <FaCalendarPlus className="text-4xl mb-4 group-hover:scale-110 transition-transform" />
+                <span className="text-center group-hover:underline">Agende Seu Corte</span>
               </Link>
             </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <Link href="/user/agendamentos" className="flex items-center justify-center px-6 py-4 bg-green-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-green-700 transition-colors w-full group">
-                <FaListAlt className="mr-3 text-xl group-hover:rotate-12 transition-transform" />
-                <span className="group-hover:underline">Consultar Agendamentos</span>
+            <motion.div variants={itemVariants} className="col-span-1">
+              <Link href="/user/agendamentos" className="flex flex-col items-center justify-center px-6 py-8 bg-green-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-green-700 transition-colors w-full h-full group">
+                <FaListAlt className="text-4xl mb-4 group-hover:scale-110 transition-transform" />
+                <span className="text-center group-hover:underline">Consultar Agendamentos</span>
               </Link>
             </motion.div>
 
-            <motion.div variants={itemVariants}>
-              <Link href="/servicos" className="flex items-center justify-center px-6 py-4 bg-purple-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-purple-700 transition-colors w-full group">
-                <FaCut className="mr-3 text-xl group-hover:rotate-12 transition-transform" />
-                <span className="group-hover:underline">Nossos Serviços</span>
+            <motion.div variants={itemVariants} className="col-span-1">
+              <Link href="/servicos" className="flex flex-col items-center justify-center px-6 py-8 bg-purple-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-purple-700 transition-colors w-full h-full group">
+                <FaCut className="text-4xl mb-4 group-hover:scale-110 transition-transform" />
+                <span className="text-center group-hover:underline">Nossos Serviços</span>
               </Link>
             </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <button
-                onClick={() => setShowTip(!showTip)}
-                className="flex items-center justify-center px-6 py-4 bg-yellow-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-yellow-700 transition-colors w-full group"
-              >
-                <FaInfoCircle className="mr-3 text-xl group-hover:rotate-12 transition-transform" />
-                <span className="group-hover:underline">Dica do Dia</span>
-              </button>
-            </motion.div>
-          </motion.div>
-
-          <AnimatePresence>
-            {showTip && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="mt-6 p-4 bg-blue-800 rounded-lg shadow-lg max-w-md"
-              >
-                <p className="text-white text-center">
-                  Dica: Mantenha seu cabelo hidratado bebendo bastante água e usando produtos adequados para o seu tipo de cabelo!
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-8"
-          >
-            <Link href="/conta" className="flex items-center text-blue-300 hover:text-blue-400 transition-colors group">
-              <FaUserCircle className="mr-2 group-hover:rotate-12 transition-transform" />
-              <span className="group-hover:underline">Minha Conta</span>
-            </Link>
           </motion.div>
         </main>
       </div>
