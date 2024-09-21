@@ -7,7 +7,7 @@ cron.schedule('0 0 * * *', () => {
   const clients = getClientsThatNeedNotification();
 
   clients.forEach(client => {
-    fetch('https://seu-dominio.vercel.app/api/send-message', {
+    fetch('https://barber-agenda.vercel.app/api/send-message', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
