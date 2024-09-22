@@ -1,11 +1,45 @@
-import chrome from 'chrome-aws-lambda';
-import { Client } from 'whatsapp-web.js';
+// pages/api/send-message.js
+
+import { Client, LocalAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
+import cron from 'node-cron';
 
 let client = null;
 let qrCodeData = null;
 let isReady = false;
 let messageQueue = [];
+
+// Inicializa o cliente do WhatsApp
+async function initializeClient() {
+    if (!client) {
+        client = new Client({
+            authStrategy: new LocalAuth(),
+            puppeteer: {
+                headless: true,
+            },
+        });
+
+        client.on('qr', async (qr) => {
+            qrCodeData = await qrcode.toDataURL(qr);
+            isReady = false;
+        });
+
+        client.on('ready', () => {
+            console.log('Cliente está pronto!');
+            qrCodeData = null;
+            isReady = true;
+            sendQueuedMessages(); // Envia mensagens enfileiradas
+        });
+
+        client.on('disconnected', () => {
+            console.log('Cliente desconectado. Reinicializando...');
+            isReady = false;
+            client = null;
+        });
+
+        await client.initialize();
+    }
+}
 
 // Função para enviar mensagens enfileiradas
 async function sendQueuedMessages() {
@@ -22,57 +56,27 @@ async function sendQueuedMessages() {
     }
 }
 
-// Função para inicializar o cliente do WhatsApp
-async function initializeClient() {
-    if (!client) {
-        const browserArgs = {
-            puppeteer: {
-                args: [...chrome.args, '--no-sandbox', '--disable-setuid-sandbox'],
-                executablePath: await chrome.executablePath,
-                headless: true,
-            },
-        };
-
-        client = new Client(browserArgs);
-
-        client.on('qr', async (qr) => {
-            try {
-                qrCodeData = await qrcode.toDataURL(qr);  // Gera o QR Code
-                isReady = false;
-            } catch (err) {
-                console.error('Erro ao gerar QR code:', err);
-            }
-        });
-
-        client.on('ready', () => {
-            console.log('Cliente está pronto!');
-            qrCodeData = null;
-            isReady = true;
-            sendQueuedMessages();  // Envia as mensagens enfileiradas
-        });
-
-        client.on('disconnected', () => {
-            console.log('Cliente desconectado. Reinicializando...');
-            isReady = false;
-            client = null;
-        });
-
-        await client.initialize();  // Inicializa o cliente
+// Agendamento de mensagens
+cron.schedule('0 0 1 * *', async () => {
+    const clients = await getClientList(); // Função para pegar a lista de clientes
+    for (const client of clients) {
+        const message = "Sua mensagem mensal aqui!";
+        await sendMessage(client.phoneNumber, message);
     }
-}
+});
 
+// Handler da API
 export default async function handler(req, res) {
     try {
-        // Inicializa o cliente se necessário
         await initializeClient();
 
         if (req.method === 'GET') {
             if (qrCodeData) {
-                res.status(200).json({ qrCode: qrCodeData, isReady: false });  // QR code disponível
+                res.status(200).json({ qrCode: qrCodeData, isReady: false });
             } else if (isReady) {
-                res.status(200).json({ status: 'Cliente conectado', isReady: true });  // Cliente conectado
+                res.status(200).json({ status: 'Cliente conectado', isReady: true });
             } else {
-                res.status(202).json({ status: 'Aguardando QR Code', isReady: false });  // Aguardando conexão
+                res.status(202).json({ status: 'Aguardando QR Code', isReady: false });
             }
         } else if (req.method === 'POST') {
             const { phoneNumber, message } = req.body;
@@ -86,14 +90,7 @@ export default async function handler(req, res) {
                 return res.status(202).json({ status: 'Cliente não conectado. Mensagem enfileirada.' });
             }
 
-            try {
-                const chatId = phoneNumber.includes('@c.us') ? phoneNumber : `${phoneNumber}@c.us`;
-                await client.sendMessage(chatId, message);
-                res.status(200).json({ status: 'Mensagem enviada com sucesso' });
-            } catch (error) {
-                console.error('Erro ao enviar mensagem:', error);
-                res.status(500).json({ error: 'Erro ao enviar mensagem' });
-            }
+            await sendQueuedMessages();
         } else {
             res.status(405).json({ error: 'Método não permitido' });
         }

@@ -1,8 +1,0 @@
-{
-    "functions": {
-      "api/**/*.js": {
-        "includeFiles": "node_modules/chrome-aws-lambda/**/*"
-      }
-    }
-  }
-  
