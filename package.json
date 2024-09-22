@@ -26,6 +26,11 @@
     "mongodb": "^6.7.0",
     "mongoose": "^8.4.3",
     "next": "14.2.4",
+    "puppeteer": "^23.4.0",
+    "puppeteer-core": "^23.4.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "qrcode.react": "^4.0.1",
     "react": "^18",
     "react-big-calendar": "^1.13.0",
     "react-calendar": "^5.0.0",
@@ -37,7 +42,8 @@
     "react-spinners": "^0.14.1",
     "recharts": "^2.12.7",
     "sqlite3": "^5.1.7",
-    "swr": "^2.2.5"
+    "swr": "^2.2.5",
+    "whatsapp-web.js": "^1.26.0"
   },
   "devDependencies": {
     "@types/moment": "^2.13.0",
