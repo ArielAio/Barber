@@ -20,24 +20,31 @@ const SendMessagePage = () => {
     setError(null);
     try {
       const response = await fetch('/api/send-message');
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await response.json();
 
-      if (data.qrCode) {
-        setQrCode(data.qrCode);
-        setStatus('QR Code gerado');
-        setIsLoading(false);
-        setIsAuthenticated(false);
-      } else if (data.status) {
-        setStatus(data.status);
-        if (data.isReady) {
-          setQrCode(null);
+        if (data.qrCode) {
+          setQrCode(data.qrCode);
+          setStatus('QR Code gerado');
           setIsLoading(false);
-          setIsAuthenticated(true);
+          setIsAuthenticated(false);
+        } else if (data.status) {
+          setStatus(data.status);
+          if (data.isReady) {
+            setQrCode(null);
+            setIsLoading(false);
+            setIsAuthenticated(true);
+          } else {
+            setTimeout(fetchQrCode, 2000);
+          }
         } else {
-          setTimeout(fetchQrCode, 2000);
+          setError('Resposta inesperada do servidor: ' + JSON.stringify(data));
+          setIsLoading(false);
         }
       } else {
-        setError('Erro ao gerar o QR Code: ' + JSON.stringify(data));
+        const text = await response.text();
+        setError('Resposta não-JSON do servidor: ' + text.substring(0, 100) + '...');
         setIsLoading(false);
       }
     } catch (err) {
