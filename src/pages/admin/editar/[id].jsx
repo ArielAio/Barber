@@ -11,6 +11,7 @@ import { ptBR } from 'date-fns/locale';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import DateModal from '../../../components/DateModal';
 import TimeModal from '../../../components/TimeModal';
+import { startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 
 function EditarCliente() {
     const router = useRouter();
