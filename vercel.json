@@ -1,18 +1,7 @@
 {
     "functions": {
-      "api/*.js": {
-        "runtime": "nodejs18.x",
-        "memory": 1024,
-        "maxDuration": 10,
-        "includeFiles": [
-          "node_modules/puppeteer/.local-chromium/**/*"
-        ]
-      }
-    },
-    "build": {
-      "env": {
-        "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
-        "CHROME_EXECUTABLE_PATH": "/usr/bin/google-chrome-stable"
+      "api/**/*.js": {
+        "includeFiles": "node_modules/chrome-aws-lambda/**/*"
       }
     }
   }
