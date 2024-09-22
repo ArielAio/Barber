@@ -1,5 +1,5 @@
+import chrome from 'chrome-aws-lambda';
 import { Client } from 'whatsapp-web.js';
-import qrcode from 'qrcode';
 
 let client = null;
 let qrCodeData = null;
@@ -24,16 +24,19 @@ export default async function handler(req, res) {
     try {
         if (req.method === 'GET') {
             if (!client) {
-                client = new Client({
+                const browserArgs = {
                     puppeteer: {
-                        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+                        args: [...chrome.args, '--no-sandbox', '--disable-setuid-sandbox'],
+                        executablePath: await chrome.executablePath,
+                        headless: true,
                     },
-                });
+                };
+
+                client = new Client(browserArgs);
 
                 client.on('qr', async (qr) => {
                     try {
                         qrCodeData = await qrcode.toDataURL(qr);
-                        console.log('QR RECEIVED');
                         isReady = false;
                     } catch (err) {
                         console.error('Error generating QR code:', err);
