@@ -14,6 +14,7 @@
     "@fullcalendar/react": "^6.1.14",
     "@fullcalendar/timegrid": "^6.1.14",
     "@open-wa/wa-automate": "^4.72.5",
+    "@sendgrid/mail": "^8.1.3",
     "chart.js": "^4.4.4",
     "chrome-aws-lambda": "~6.0.0",
     "date-fns": "^3.6.0",
@@ -28,6 +29,7 @@
     "mongoose": "^8.4.3",
     "next": "14.2.4",
     "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.15",
     "puppeteer": "^23.4.0",
     "puppeteer-core": "~6.0.0",
     "qrcode": "^1.5.4",
@@ -43,6 +45,7 @@
     "react-router-dom": "^5.3.4",
     "react-spinners": "^0.14.1",
     "recharts": "^2.12.7",
+    "resend": "^4.0.0",
     "sqlite3": "^5.1.7",
     "swr": "^2.2.5",
     "whatsapp-web.js": "^1.26.0"

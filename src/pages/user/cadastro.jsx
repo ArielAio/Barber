@@ -224,7 +224,7 @@ function Cadastro() {
             setServico('');
             setPreco('');
             setError('');
-            router.push('/');
+            router.push('/user/agendamentos');
         } catch (error) {
             console.error('Erro ao cadastrar Agendamento:', error);
             setError('Erro ao cadastrar Agendamento. Tente novamente.');

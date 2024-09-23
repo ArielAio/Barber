@@ -7,7 +7,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCalendarAlt, FaEdit, FaTrashAlt, FaChevronLeft, FaClock, FaArrowLeft, FaTimes } from 'react-icons/fa';
+import { FaCalendarAlt, FaEdit, FaTrashAlt, FaChevronLeft, FaClock, FaArrowLeft, FaTimes, FaCalendarTimes } from 'react-icons/fa';
 import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subDays, parseISO, addHours, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import DateModal from '../../components/DateModal';
@@ -38,6 +38,8 @@ function Agendamentos() {
     const [calendarEvents, setCalendarEvents] = useState([]);
     const [editingAgendamentoId, setEditingAgendamentoId] = useState(null);
     const editFormRef = useRef(null);
+    const [progress, setProgress] = useState(0);
+    const progressIntervalRef = useRef(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -233,6 +235,19 @@ function Agendamentos() {
                 await deleteDoc(agendamentoRef);
                 setFeedbackMessage('Agendamento cancelado com sucesso!');
                 await fetchAgendamentos(userEmail);
+
+                // Clear the feedback message after 5 seconds
+                setProgress(0);
+                progressIntervalRef.current = setInterval(() => {
+                    setProgress((prev) => {
+                        if (prev >= 100) {
+                            clearInterval(progressIntervalRef.current);
+                            setFeedbackMessage('');
+                            return 100;
+                        }
+                        return prev + 2;
+                    });
+                }, 100);
             } catch (error) {
                 console.error('Erro ao cancelar o agendamento:', error);
                 setFeedbackMessage('Erro ao cancelar o agendamento.');
@@ -240,11 +255,16 @@ function Agendamentos() {
         }
     };
 
+    const handleCloseFeedback = () => {
+        setFeedbackMessage('');
+        clearInterval(progressIntervalRef.current);
+    };
+
     const getServiceName = (serviceId) => {
         const serviceNames = {
-            corte_cabelo: 'Corte de Cabelo',
-            corte_barba: 'Corte de Barba',
-            corte_cabelo_barba: 'Corte de Cabelo e Barba'
+            corte_cabelo: 'Cabelo',
+            corte_barba: 'Barba',
+            corte_cabelo_barba: 'Cabelo e Barba'
         };
         return serviceNames[serviceId] || serviceId;
     };
@@ -266,11 +286,18 @@ function Agendamentos() {
 
             {feedbackMessage && (
                 <motion.div
-                    className="w-full max-w-lg bg-opacity-80 bg-green-500 p-4 rounded-lg shadow-lg mb-8 text-center"
+                    className="w-full max-w-lg bg-opacity-80 bg-green-500 p-4 rounded-lg shadow-lg mb-8 text-center relative"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                 >
+                    <div className="absolute top-0 left-0 h-1 bg-green-700" style={{ width: `${progress}%` }}></div>
+                    <button
+                        onClick={handleCloseFeedback}
+                        className="absolute top-0 right-0 mt-2 mr-2 text-white"
+                    >
+                        <FaTimes />
+                    </button>
                     {feedbackMessage}
                 </motion.div>
             )}
@@ -292,6 +319,27 @@ function Agendamentos() {
                         <p className="mb-2 text-lg"><strong>Serviço:</strong> {getServiceName(recentAgendamento.servico)}</p>
                         <p className="mb-2 text-lg"><strong>Preço:</strong> {recentAgendamento.preco}</p>
                     </div>
+                </motion.div>
+            )}
+
+            {agendamentos.length === 0 && (
+                <motion.div
+                    className="w-full max-w-lg bg-opacity-80 bg-red-500 p-4 rounded-lg shadow-lg mb-8 text-center"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                >
+                    <FaCalendarTimes className="text-4xl mb-4" />
+                    Nenhum agendamento cadastrado.
+                    <motion.button
+                        onClick={() => router.push('/user/cadastro')}
+                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        <FaCalendarAlt className="inline-block mr-2" />
+                        Cadastrar Novo Agendamento
+                    </motion.button>
                 </motion.div>
             )}
 
@@ -349,51 +397,53 @@ function Agendamentos() {
                 </motion.div>
             )}
 
-            <motion.div
-                className="w-full max-w-lg"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-            >
-                <h2 className="text-2xl font-bold mb-4">Todos os Agendamentos</h2>
-                {agendamentos.map((agendamento) => (
-                    <motion.div
-                        key={agendamento.id}
-                        className="bg-opacity-90 bg-gray-800 p-4 rounded-lg shadow-lg mb-4"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                            <div className="mb-2 md:mb-0">
-                                <p className="font-bold text-lg">{agendamento.nome}</p>
-                                <p className="text-sm text-gray-300">{format(agendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
+            {agendamentos.length > 0 && (
+                <motion.div
+                    className="w-full max-w-lg"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                    <h2 className="text-2xl font-bold mb-4">Todos os Agendamentos</h2>
+                    {agendamentos.map((agendamento) => (
+                        <motion.div
+                        admin          key={agendamento.id}
+                            className="bg-opacity-90 bg-gray-800 p-4 rounded-lg shadow-lg mb-4"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                                <div className="mb-2 md:mb-0">
+                                    <p className="font-bold text-lg">{agendamento.nome}</p>
+                                    <p className="text-sm text-gray-300">{format(agendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    <p className="text-sm">{getServiceName(agendamento.servico)}</p>
+                                    <p className="font-bold text-yellow-400">{agendamento.preco}</p>
+                                </div>
                             </div>
-                            <div className="flex flex-col items-end">
-                                <p className="text-sm">{getServiceName(agendamento.servico)}</p>
-                                <p className="font-bold text-yellow-400">{agendamento.preco}</p>
+                            <div className="mt-4 flex justify-end space-x-2">
+                                <button
+                                    onClick={() => handleEdit(agendamento)}
+                                    className={`${editingAgendamentoId === agendamento.id
+                                        ? 'bg-gray-500 hover:bg-gray-600'
+                                        : 'bg-yellow-500 hover:bg-yellow-600'
+                                        } text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400`}
+                                >
+                                    <FaEdit className="mr-2 inline-block" /> Editar
+                                </button>
+                                <button
+                                    onClick={() => handleCancel(agendamento.id)}
+                                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-red-400"
+                                >
+                                    <FaTrashAlt className="mr-2 inline-block" /> Cancelar
+                                </button>
                             </div>
-                        </div>
-                        <div className="mt-4 flex justify-end space-x-2">
-                            <button
-                                onClick={() => handleEdit(agendamento)}
-                                className={`${editingAgendamentoId === agendamento.id
-                                    ? 'bg-gray-500 hover:bg-gray-600'
-                                    : 'bg-yellow-500 hover:bg-yellow-600'
-                                    } text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400`}
-                            >
-                                <FaEdit className="mr-2 inline-block" /> Editar
-                            </button>
-                            <button
-                                onClick={() => handleCancel(agendamento.id)}
-                                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-red-400"
-                            >
-                                <FaTrashAlt className="mr-2 inline-block" /> Cancelar
-                            </button>
-                        </div>
-                    </motion.div>
-                ))}
-            </motion.div>
+                        </motion.div>
+                    ))}
+                </motion.div>
+            )}
 
             <div className="w-full max-w-lg mt-8">
                 <h2 className="text-2xl font-bold mb-4">Calendário de Agendamentos</h2>
@@ -405,7 +455,7 @@ function Agendamentos() {
                 setShowModal={setShowDateModal}
                 currentMonth={currentMonth}
                 setCurrentMonth={setCurrentMonth}
-                selectedDate={selectedDate}
+                admin={selectedDate}
                 handleDateSelect={handleDateSelect}
                 generateCalendarDays={generateCalendarDays}
             />
@@ -419,7 +469,7 @@ function Agendamentos() {
                 scheduledTimes={scheduledTimes}
                 isLoadingHorarios={isLoadingHorarios}
             />
-             <Footer/>
+            <Footer />
         </div>
     );
 }

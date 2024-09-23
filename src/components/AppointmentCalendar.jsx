@@ -53,15 +53,36 @@ const StyledCalendarWrapper = styled.div`
       padding: 2px 4px;
     }
   }
+
+  @media (max-width: 768px) {
+    .custom-calendar {
+      .rbc-header {
+        font-size: 0.875rem;
+        padding: 0.5rem;
+      }
+      .rbc-event-content {
+        font-size: 0.75rem;
+      }
+      .rbc-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .rbc-toolbar button {
+        margin-bottom: 0.5rem;
+      }
+    }
+  }
 `;
 
 const CALENDAR_MESSAGES = {
-  next: "›",
-  previous: "‹",
+  next: "Próximo",
+  previous: "Anterior",
   today: "Hoje",
   month: "Mês",
   week: "Semana",
-  day: "Dia"
+  day: "Dia",
+  agenda: "Agenda",
+  showMore: total => `+${total} mais`
 };
 
 const CALENDAR_FORMATS = {
@@ -69,6 +90,16 @@ const CALENDAR_FORMATS = {
     localizer.format(date, 'MMMM YYYY', culture),
   dayHeaderFormat: (date, culture, localizer) =>
     localizer.format(date, 'dddd, D MMM', culture),
+  dayRangeHeaderFormat: ({ start, end }, culture, localizer) =>
+    `${localizer.format(start, 'D MMM', culture)} - ${localizer.format(end, 'D MMM', culture)}`,
+  agendaHeaderFormat: ({ start, end }, culture, localizer) =>
+    `${localizer.format(start, 'D MMM', culture)} - ${localizer.format(end, 'D MMM', culture)}`,
+  agendaDateFormat: (date, culture, localizer) =>
+    localizer.format(date, 'ddd, D MMM', culture),
+  agendaTimeFormat: (date, culture, localizer) =>
+    localizer.format(date, 'HH:mm', culture),
+  agendaTimeRangeFormat: ({ start, end }, culture, localizer) =>
+    `${localizer.format(start, 'HH:mm', culture)} - ${localizer.format(end, 'HH:mm', culture)}`,
 };
 
 const AppointmentCalendar = ({ events }) => {
@@ -95,7 +126,7 @@ const AppointmentCalendar = ({ events }) => {
 
   const CustomToolbar = ({ onNavigate, label }) => (
     <div className="flex justify-between items-center mb-4 text-gray-800">
-      <div>
+      <div className="flex">
         <button onClick={() => onNavigate('PREV')} className="text-2xl font-bold text-blue-600 mr-4 hover:text-blue-700 transition-colors">
           <FaChevronLeft />
         </button>
@@ -153,7 +184,7 @@ const AppointmentCalendar = ({ events }) => {
             endAccessor="end"
             style={{ height: '100%' }}
             messages={CALENDAR_MESSAGES}
-            views={['month', 'week', 'day']}
+            views={['month', 'week', 'day', 'agenda']}
             formats={CALENDAR_FORMATS}
             components={{
               toolbar: CustomToolbar,
