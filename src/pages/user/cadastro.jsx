@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut } from 'react-icons/fa';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subMonths, addMonths, parseISO, isEqual } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO, isEqual } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import DateModal from '../../components/DateModal';
 import TimeModal from '../../components/TimeModal';
@@ -22,7 +22,6 @@ function Cadastro() {
     const [horario, setHorario] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [nome, setNome] = useState('');
     const [servico, setServico] = useState('');
     const [preco, setPreco] = useState('');
@@ -47,17 +46,11 @@ function Cadastro() {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                setIsAuthenticated(true);
                 setEmail(user.email);
-
                 const docRef = doc(db, 'users', user.uid);
                 const docSnap = await getDoc(docRef);
-
                 if (docSnap.exists()) {
-                    const userData = docSnap.data();
-                    setNome(userData.username || '');
-                } else {
-                    console.log("Documento não encontrado.");
+                    setNome(docSnap.data().username || '');
                 }
             } else {
                 router.push('/login');
@@ -78,10 +71,6 @@ function Cadastro() {
     useEffect(() => {
         setPreco(servicoPrecosMap[servico] || '');
     }, [servico]);
-
-    const getCurrentDate = () => {
-        return new Date().toISOString().split('T')[0];
-    };
 
     const generateCalendarDays = useCallback(() => {
         const start = startOfMonth(currentMonth);
@@ -113,7 +102,6 @@ function Cadastro() {
     const fetchHorarios = useCallback(async (date) => {
         setIsLoadingHorarios(true);
         try {
-            const db = getFirestore(app);
             const appointmentsRef = collection(db, 'agendamentos');
             const selectedDateString = format(date, 'yyyy-MM-dd');
             const startOfDay = new Date(selectedDateString);
@@ -146,11 +134,10 @@ function Cadastro() {
             setHorarios(updatedHorarios);
         } catch (error) {
             console.error('Error fetching horarios:', error);
-            // Handle the error appropriately
         } finally {
             setIsLoadingHorarios(false);
         }
-    }, []);
+    }, [db]);
 
     useEffect(() => {
         fetchHorarios(selectedDate);
@@ -163,7 +150,6 @@ function Cadastro() {
     const fetchScheduledTimes = async () => {
         setIsLoadingScheduledTimes(true);
         try {
-            const db = getFirestore(app);
             const appointmentsRef = collection(db, 'agendamentos');
             const querySnapshot = await getDocs(appointmentsRef);
             
@@ -175,7 +161,6 @@ function Cadastro() {
             setScheduledTimes(times);
         } catch (error) {
             console.error('Error fetching scheduled times:', error);
-            // Handle the error appropriately
         } finally {
             setIsLoadingScheduledTimes(false);
         }
@@ -197,7 +182,6 @@ function Cadastro() {
             const timeZone = 'America/Sao_Paulo';
             const dataAgendamento = moment.tz(`${year}-${month}-${day} ${hour}:${minute}`, timeZone).toDate();
 
-            // Check if the appointment time is already taken
             const isTimeSlotTaken = scheduledTimes.some(time => 
                 isEqual(parseISO(time), dataAgendamento)
             );

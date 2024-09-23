@@ -14,13 +14,11 @@ function Agendamentos() {
     const [clientesPendentes, setClientesPendentes] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [clientesPerPage] = useState(10);
-    const [selectedCliente, setSelectedCliente] = useState(null);
     const [statusFilter, setStatusFilter] = useState('Todos');
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [role, setRole] = useState(null);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [servicosData, setServicosData] = useState({});
     const [expandedClientes, setExpandedClientes] = useState({});
     const [showPastAppointments, setShowPastAppointments] = useState(false);
     const [showFutureAppointments, setShowFutureAppointments] = useState(true);
@@ -29,16 +27,6 @@ function Agendamentos() {
     const db = getFirestore(app);
 
     const fetchClientesPendentes = useCallback(async () => {
-        const settingsDoc = await getDoc(doc(db, 'barbearia', 'configuracao'));
-        if (settingsDoc.exists()) {
-            const data = settingsDoc.data();
-            setServicosData({
-                corte_cabelo: { nome: 'Corte de Cabelo', preco: data.precoCorte || '35,00' },
-                corte_barba: { nome: 'Corte de Barba', preco: data.precoBarba || '25,00' },
-                corte_cabelo_barba: { nome: 'Corte de Cabelo e Barba', preco: data.precoCabeloBarba || '50,00' },
-            });
-        }
-
         const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
         let clientesData = agendamentosSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -61,34 +49,9 @@ function Agendamentos() {
             };
         });
 
-        if (statusFilter !== 'Todos') {
-            clientesData = clientesData.filter(cliente => cliente.statusPagamento === statusFilter);
-        }
+        clientesData = filterClientes(clientesData);
 
-        if (searchTerm) {
-            clientesData = clientesData.filter(cliente =>
-                cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-
-        const now = moment();
-        if (showPastAppointments) {
-            clientesData = clientesData.filter(cliente => moment(cliente.dataHoraUTC).isBefore(now));
-        } else if (showFutureAppointments) {
-            clientesData = clientesData.filter(cliente => moment(cliente.dataHoraUTC).isAfter(now));
-        }
-
-        const groupedClientes = clientesData.reduce((acc, cliente) => {
-            if (!acc[cliente.email]) {
-                acc[cliente.email] = [];
-            }
-            acc[cliente.email].push(cliente);
-            return acc;
-        }, {});
-
-        Object.values(groupedClientes).forEach(group => {
-            group.sort((a, b) => a.dataHoraUTC - b.dataHoraUTC);
-        });
+        const groupedClientes = groupClientesByEmail(clientesData);
 
         setClientesPendentes(groupedClientes);
         setLoading(false);
@@ -117,7 +80,6 @@ function Agendamentos() {
     const handleStatusChange = async (cliente, novoStatus) => {
         const clienteRef = doc(db, 'agendamentos', cliente.id);
         await updateDoc(clienteRef, { statusPagamento: novoStatus });
-        setSelectedCliente(null);
         fetchClientesPendentes();
     };
 
@@ -132,11 +94,36 @@ function Agendamentos() {
         }
     };
 
-    const indexOfLastCliente = currentPage * clientesPerPage;
-    const indexOfFirstCliente = indexOfLastCliente - clientesPerPage;
-    const currentClientes = Object.values(clientesPendentes).slice(indexOfFirstCliente, indexOfLastCliente);
+    const filterClientes = (clientesData) => {
+        if (statusFilter !== 'Todos') {
+            clientesData = clientesData.filter(cliente => cliente.statusPagamento === statusFilter);
+        }
 
-    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+        if (searchTerm) {
+            clientesData = clientesData.filter(cliente =>
+                cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        const now = moment();
+        if (showPastAppointments) {
+            clientesData = clientesData.filter(cliente => moment(cliente.dataHoraUTC).isBefore(now));
+        } else if (showFutureAppointments) {
+            clientesData = clientesData.filter(cliente => moment(cliente.dataHoraUTC).isAfter(now));
+        }
+
+        return clientesData;
+    };
+
+    const groupClientesByEmail = (clientesData) => {
+        return clientesData.reduce((acc, cliente) => {
+            if (!acc[cliente.email]) {
+                acc[cliente.email] = [];
+            }
+            acc[cliente.email].push(cliente);
+            return acc;
+        }, {});
+    };
 
     const getServiceName = (serviceId) => {
         const serviceNames = {
@@ -354,7 +341,7 @@ function Agendamentos() {
                     {Array.from({ length: Math.ceil(Object.keys(clientesPendentes).length / clientesPerPage) }, (_, i) => (
                         <button
                             key={i}
-                            onClick={() => paginate(i + 1)}
+                            onClick={() => setCurrentPage(i + 1)}
                             className={`mx-1 px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
                                 } transition-colors duration-300`}
                         >

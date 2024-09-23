@@ -1,14 +1,12 @@
-// pages/user/agendamentos.jsx
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { getFirestore, collection, query, where, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import app from '../../lib/firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaCalendarAlt, FaEdit, FaTrashAlt, FaChevronLeft, FaClock, FaArrowLeft, FaTimes, FaCalendarTimes } from 'react-icons/fa';
-import { format, addDays, isSunday, startOfMonth, endOfMonth, eachDayOfInterval, getDay, subDays, parseISO, addHours, isAfter } from 'date-fns';
+import { motion } from 'framer-motion';
+import { FaCalendarAlt, FaEdit, FaTrashAlt, FaClock, FaTimes, FaCalendarTimes } from 'react-icons/fa';
+import { format, addHours, isAfter, subDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import DateModal from '../../components/DateModal';
 import TimeModal from '../../components/TimeModal';
@@ -59,7 +57,6 @@ function Agendamentos() {
             const q = query(collection(db, 'agendamentos'), where('email', '==', email));
             const agendamentosSnapshot = await getDocs(q);
 
-            // Buscar o usuário correspondente
             const userQuery = query(collection(db, 'users'), where('email', '==', email));
             const userSnapshot = await getDocs(userQuery);
             let username = '';
@@ -72,7 +69,7 @@ function Agendamentos() {
                 return {
                     id: doc.id,
                     ...agendamentoData,
-                    username: username // Adicionar o username ao objeto do agendamento
+                    username: username
                 };
             }));
 
@@ -86,7 +83,6 @@ function Agendamentos() {
             setRecentAgendamento(validAgendamentos[0] || null);
             setAgendamentos(validAgendamentos);
 
-            // Atualizar os eventos do calendário com o nome de usuário
             const events = validAgendamentos.map(agendamento => ({
                 title: getServiceName(agendamento.servico),
                 start: agendamento.dataAgendamento.toDate(),
@@ -116,9 +112,9 @@ function Agendamentos() {
     const generateHorarios = useCallback(async (date) => {
         setIsLoadingHorarios(true);
 
-        const start = 9; // 9:00
-        const end = 18; // 18:00
-        const interval = 30; // 30 minutes
+        const start = 9;
+        const end = 18;
+        const interval = 30;
         const generatedHorarios = [];
 
         for (let hour = start; hour < end; hour++) {
@@ -142,7 +138,7 @@ function Agendamentos() {
             dateTime.setHours(parseInt(hour), parseInt(minute));
 
             const isOccupied = agendamentos.some(agendamento => {
-                if (agendamento.id === editingAgendamentoId) return false; // Exclude the current appointment
+                if (agendamento.id === editingAgendamentoId) return false;
                 const agendamentoDate = agendamento.dataAgendamento.toDate();
                 return agendamentoDate.getTime() === dateTime.getTime();
             });
@@ -155,7 +151,6 @@ function Agendamentos() {
     }, [db, editingAgendamentoId]);
 
     const handleEdit = (agendamento) => {
-        // If the clicked appointment is already being edited, close it
         if (editingAgendamentoId === agendamento.id) {
             setSelectedAgendamento(null);
             setEditingAgendamentoId(null);
@@ -164,7 +159,6 @@ function Agendamentos() {
             setHorario('');
             setSelectedDate(null);
         } else {
-            // Close the current editing form (if any) and open the new one
             setSelectedAgendamento(agendamento);
             setEditingAgendamentoId(agendamento.id);
             setNome(agendamento.nome);
@@ -174,7 +168,6 @@ function Agendamentos() {
             setCurrentMonth(agendamento.dataAgendamento.toDate());
             generateHorarios(agendamento.dataAgendamento.toDate());
 
-            // Use setTimeout to ensure the form is rendered before scrolling
             setTimeout(() => {
                 if (editFormRef.current) {
                     editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -209,7 +202,6 @@ function Agendamentos() {
         if (window.confirm('Tem certeza que deseja atualizar este agendamento?')) {
             try {
                 const agendamentoRef = doc(db, 'agendamentos', selectedAgendamento.id);
-                const timeZone = 'America/Sao_Paulo';
                 const dataAgendamentoMoment = new Date(`${dataAgendamento}T${horario}`);
 
                 await updateDoc(agendamentoRef, {
@@ -237,7 +229,6 @@ function Agendamentos() {
                 setFeedbackMessage('Agendamento cancelado com sucesso!');
                 await fetchAgendamentos(userEmail);
 
-                // Clear the feedback message after 5 seconds
                 setProgress(0);
                 progressIntervalRef.current = setInterval(() => {
                     setProgress((prev) => {
@@ -285,7 +276,6 @@ function Agendamentos() {
                 Meus Agendamentos
             </motion.h1>
 
-            {/* New button for creating an appointment */}
             <motion.button
                 onClick={() => router.push('/user/cadastro')}
                 className="mb-8 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 ease-in-out"
@@ -421,7 +411,7 @@ function Agendamentos() {
                     <h2 className="text-2xl font-bold mb-4">Todos os Agendamentos</h2>
                     {agendamentos.map((agendamento) => (
                         <motion.div
-                        admin          key={agendamento.id}
+                            key={agendamento.id}
                             className="bg-opacity-90 bg-gray-800 p-4 rounded-lg shadow-lg mb-4"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -469,7 +459,7 @@ function Agendamentos() {
                 setShowModal={setShowDateModal}
                 currentMonth={currentMonth}
                 setCurrentMonth={setCurrentMonth}
-                admin={selectedDate}
+                selectedDate={selectedDate}
                 handleDateSelect={handleDateSelect}
                 generateCalendarDays={generateCalendarDays}
             />

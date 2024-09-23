@@ -17,15 +17,17 @@ import Footer from '../../components/Footer';
 
 function Cadastro() {
     const router = useRouter();
-    const [nome, setNome] = useState('');
-    const [email, setEmail] = useState('');
-    const [data, setData] = useState('');
-    const [horario, setHorario] = useState('');
+    const [formData, setFormData] = useState({
+        nome: '',
+        email: '',
+        data: '',
+        horario: '',
+        servico: '',
+        preco: ''
+    });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [role, setRole] = useState(null);
-    const [servico, setServico] = useState('');
-    const [preco, setPreco] = useState('');
     const [horarios, setHorarios] = useState([]);
     const [showDateModal, setShowDateModal] = useState(false);
     const [showTimeModal, setShowTimeModal] = useState(false);
@@ -33,7 +35,6 @@ function Cadastro() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [scheduledTimes, setScheduledTimes] = useState([]);
     const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
-    const [isLoadingScheduledTimes, setIsLoadingScheduledTimes] = useState(true);
 
     const servicoPrecosMap = {
         corte_cabelo: 'R$ 35,00',
@@ -74,9 +75,7 @@ function Cadastro() {
     }, []);
 
     const fetchScheduledTimes = async () => {
-        setIsLoadingScheduledTimes(true);
         try {
-            const db = getFirestore(app);
             const appointmentsRef = collection(db, 'agendamentos');
             const querySnapshot = await getDocs(appointmentsRef);
 
@@ -88,8 +87,6 @@ function Cadastro() {
             setScheduledTimes(times);
         } catch (error) {
             console.error('Error fetching scheduled times:', error);
-        } finally {
-            setIsLoadingScheduledTimes(false);
         }
     };
 
@@ -112,14 +109,14 @@ function Cadastro() {
 
     const handleDateSelect = (date) => {
         setSelectedDate(date);
-        setData(format(date, 'yyyy-MM-dd'));
+        setFormData(prev => ({ ...prev, data: format(date, 'yyyy-MM-dd') }));
         setShowDateModal(false);
         setShowTimeModal(true);
         generateHorarios(date);
     };
 
     const handleTimeSelect = (time) => {
-        setHorario(time);
+        setFormData(prev => ({ ...prev, horario: time }));
         setShowTimeModal(false);
     };
 
@@ -128,15 +125,13 @@ function Cadastro() {
 
         setIsLoadingHorarios(true);
         try {
-            const db = getFirestore(app);
-            const appointmentsRef = collection(db, 'agendamentos');
             const startOfDay = new Date(date);
             startOfDay.setHours(0, 0, 0, 0);
             const endOfDay = new Date(date);
             endOfDay.setHours(23, 59, 59, 999);
 
             const q = query(
-                appointmentsRef,
+                collection(db, 'agendamentos'),
                 where("dataAgendamento", ">=", startOfDay),
                 where("dataAgendamento", "<=", endOfDay)
             );
@@ -164,18 +159,20 @@ function Cadastro() {
         } finally {
             setIsLoadingHorarios(false);
         }
-    }, []);
+    }, [db]);
 
-    const handleServicoChange = (e) => {
-        const selectedServico = e.target.value;
-        setServico(selectedServico);
-        setPreco(servicoPrecosMap[selectedServico]);
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'servico') {
+            setFormData(prev => ({ ...prev, preco: servicoPrecosMap[value] }));
+        }
     };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (!nome || !data || !horario || !servico) {
+        if (!formData.nome || !formData.data || !formData.horario || !formData.servico) {
             setError('Preencha todos os campos obrigatórios!');
             return;
         }
@@ -184,8 +181,8 @@ function Cadastro() {
         setError('');
 
         try {
-            const [year, month, day] = data.split('-');
-            const [hour, minute] = horario.split(':');
+            const [year, month, day] = formData.data.split('-');
+            const [hour, minute] = formData.horario.split(':');
             const timeZone = 'America/Sao_Paulo';
             const dataAgendamento = moment.tz(`${year}-${month}-${day} ${hour}:${minute}`, timeZone).toDate();
 
@@ -200,28 +197,29 @@ function Cadastro() {
             }
 
             const agendamentoData = {
-                nome,
+                nome: formData.nome,
                 dataAgendamento: Timestamp.fromDate(dataAgendamento),
-                horaAgendamento: horario,
+                horaAgendamento: formData.horario,
                 statusPagamento: "Pendente",
-                servico,
-                preco,
+                servico: formData.servico,
+                preco: formData.preco,
             };
 
-            // Adiciona o email apenas se ele foi fornecido
-            if (email) {
-                agendamentoData.email = email;
+            if (formData.email) {
+                agendamentoData.email = formData.email;
             }
 
             await addDoc(collection(db, "agendamentos"), agendamentoData);
 
             alert('Agendamento cadastrado com sucesso!');
-            setNome('');
-            setEmail('');
-            setData('');
-            setHorario('');
-            setServico('');
-            setPreco('');
+            setFormData({
+                nome: '',
+                email: '',
+                data: '',
+                horario: '',
+                servico: '',
+                preco: ''
+            });
             setError('');
             router.push('/admin');
         } catch (error) {
@@ -283,8 +281,8 @@ function Cadastro() {
                                 id="nome"
                                 className="bg-gray-700 text-white block w-full pl-10 pr-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Nome do cliente"
-                                value={nome}
-                                onChange={(e) => setNome(e.target.value)}
+                                value={formData.nome}
+                                onChange={handleInputChange}
                                 required
                             />
                         </div>
@@ -302,8 +300,8 @@ function Cadastro() {
                                 id="email"
                                 className="bg-gray-700 text-white block w-full pl-10 pr-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="email@exemplo.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                value={formData.email}
+                                onChange={handleInputChange}
                             />
                         </div>
                     </div>
@@ -315,16 +313,16 @@ function Cadastro() {
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
                         >
                             <FaCalendarAlt className="inline-block mr-2" />
-                            {data ? format(new Date(data), 'dd/MM/yyyy') : 'Selecionar Data'}
+                            {formData.data ? format(new Date(formData.data), 'dd/MM/yyyy') : 'Selecionar Data'}
                         </button>
                         <button
                             type="button"
-                            onClick={() => data && setShowTimeModal(true)}
-                            className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105 ${!data ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={!data}
+                            onClick={() => formData.data && setShowTimeModal(true)}
+                            className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105 ${!formData.data ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={!formData.data}
                         >
                             <FaClock className="inline-block mr-2" />
-                            {horario || 'Selecionar Horário'}
+                            {formData.horario || 'Selecionar Horário'}
                         </button>
                     </div>
 
@@ -334,8 +332,8 @@ function Cadastro() {
                             id="servico"
                             name="servico"
                             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-gray-700 text-white"
-                            value={servico}
-                            onChange={handleServicoChange}
+                            value={formData.servico}
+                            onChange={handleInputChange}
                             required
                         >
                             <option value="">Selecione o serviço</option>
@@ -345,10 +343,10 @@ function Cadastro() {
                         </select>
                     </div>
 
-                    {servico && (
+                    {formData.servico && (
                         <div>
                             <div className="text-center text-lg font-semibold">
-                                Preço: {preco}
+                                Preço: {formData.preco}
                             </div>
                         </div>
                     )}
