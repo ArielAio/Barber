@@ -22,6 +22,8 @@ function Agendamentos() {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [servicosData, setServicosData] = useState({});
     const [expandedClientes, setExpandedClientes] = useState({});
+    const [showPastAppointments, setShowPastAppointments] = useState(false);
+    const [showFutureAppointments, setShowFutureAppointments] = useState(true);
     const router = useRouter();
     const auth = getAuth(app);
     const db = getFirestore(app);
@@ -43,6 +45,7 @@ function Agendamentos() {
             const dataHoraUTC = data.dataAgendamento.toDate();
             const timeZone = 'America/Sao_Paulo';
             const dataHoraLocal = moment.tz(dataHoraUTC, timeZone);
+            const now = moment();
 
             return {
                 id: doc.id,
@@ -53,23 +56,28 @@ function Agendamentos() {
                 statusPagamento: data.statusPagamento || 'Pendente',
                 servico: data.servico,
                 preco: data.preco,
-                dataHoraUTC: dataHoraUTC
+                dataHoraUTC: dataHoraUTC,
+                isConcluido: moment(dataHoraUTC).isBefore(now)
             };
         });
 
-        // Filtra por status
         if (statusFilter !== 'Todos') {
             clientesData = clientesData.filter(cliente => cliente.statusPagamento === statusFilter);
         }
 
-        // Filtra pelo nome
         if (searchTerm) {
             clientesData = clientesData.filter(cliente =>
                 cliente.nome.toLowerCase().includes(searchTerm.toLowerCase())
             );
         }
 
-        // Agrupa por email
+        const now = moment();
+        if (showPastAppointments) {
+            clientesData = clientesData.filter(cliente => moment(cliente.dataHoraUTC).isBefore(now));
+        } else if (showFutureAppointments) {
+            clientesData = clientesData.filter(cliente => moment(cliente.dataHoraUTC).isAfter(now));
+        }
+
         const groupedClientes = clientesData.reduce((acc, cliente) => {
             if (!acc[cliente.email]) {
                 acc[cliente.email] = [];
@@ -78,14 +86,13 @@ function Agendamentos() {
             return acc;
         }, {});
 
-        // Ordena por data e hora
         Object.values(groupedClientes).forEach(group => {
             group.sort((a, b) => a.dataHoraUTC - b.dataHoraUTC);
         });
 
         setClientesPendentes(groupedClientes);
         setLoading(false);
-    }, [statusFilter, searchTerm, db]);
+    }, [statusFilter, searchTerm, showPastAppointments, showFutureAppointments, db]);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -150,11 +157,27 @@ function Agendamentos() {
         return 'Preço não especificado';
     };
 
-    const toggleExpand = (email) => {
+    const toggleExpand = (email, date) => {
+        const key = `${email}-${date}`;
         setExpandedClientes(prevState => ({
             ...prevState,
-            [email]: !prevState[email]
+            [key]: !prevState[key]
         }));
+    };
+
+    const groupByDateAndEmail = (clientes) => {
+        return clientes.reduce((acc, cliente) => {
+            const date = moment(cliente.dataHoraUTC).format('dddd, DD [de] MMMM');
+            const email = cliente.email;
+            if (!acc[date]) {
+                acc[date] = {};
+            }
+            if (!acc[date][email]) {
+                acc[date][email] = [];
+            }
+            acc[date][email].push(cliente);
+            return acc;
+        }, {});
     };
 
     if (role === null) {
@@ -165,7 +188,7 @@ function Agendamentos() {
         <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 text-white p-4 md:p-8 flex flex-col">
             <div className="flex-grow">
                 <h1 className="text-3xl font-bold mb-6 text-center">Agendamentos</h1>
-                
+
                 <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
                     <div className="relative w-full md:w-64">
                         <input
@@ -177,7 +200,7 @@ function Agendamentos() {
                         />
                         <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                     </div>
-                    
+
                     <button
                         onClick={() => setIsFilterOpen(!isFilterOpen)}
                         className="flex items-center justify-center w-full md:w-auto px-4 py-2 bg-blue-600 rounded-full hover:bg-blue-700 transition-colors duration-300"
@@ -193,21 +216,54 @@ function Agendamentos() {
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="mb-6 flex flex-wrap justify-center gap-2"
+                            className="mb-6 flex flex-wrap justify-center gap-4"
                         >
-                            {['Todos', 'Pendente', 'Pago'].map((status) => (
-                                <button
-                                    key={status}
-                                    onClick={() => setStatusFilter(status)}
-                                    className={`px-4 py-2 rounded-full ${
-                                        statusFilter === status
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                    } transition-colors duration-300`}
-                                >
-                                    {status}
-                                </button>
-                            ))}
+                            <div className="flex flex-col items-center md:items-start">
+                                <h3 className="text-lg font-semibold mb-2">Status de Pagamento</h3>
+                                <div className="flex gap-2">
+                                    {['Todos', 'Pendente', 'Pago'].map((status) => (
+                                        <button
+                                            key={status}
+                                            onClick={() => setStatusFilter(status)}
+                                            className={`px-4 py-2 rounded-full ${statusFilter === status
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                } transition-colors duration-300`}
+                                        >
+                                            {status}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex flex-col items-center md:items-start">
+                                <h3 className="text-lg font-semibold mb-2">Data do Agendamento</h3>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setShowPastAppointments(!showPastAppointments);
+                                            if (showFutureAppointments) setShowFutureAppointments(false);
+                                        }}
+                                        className={`px-4 py-2 rounded-full ${showPastAppointments
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            } transition-colors duration-300`}
+                                    >
+                                        {showPastAppointments ? 'Mostrar Passados' : 'Mostrar Passados'}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowFutureAppointments(!showFutureAppointments);
+                                            if (showPastAppointments) setShowPastAppointments(false);
+                                        }}
+                                        className={`px-4 py-2 rounded-full ${showFutureAppointments
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            } transition-colors duration-300`}
+                                    >
+                                        {showFutureAppointments ? 'Mostrar Futuros' : 'Mostrar Futuros'}
+                                    </button>
+                                </div>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -217,114 +273,76 @@ function Agendamentos() {
                 ) : Object.keys(clientesPendentes).length === 0 ? (
                     <p className="text-center text-gray-400">Nenhum agendamento encontrado.</p>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {currentClientes.map((clientes, index) => (
-                            <motion.div
-                                key={clientes[0].email}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.1 }}
-                                className="bg-gray-800 p-4 rounded-lg shadow-lg"
-                            >
-                                <div className="flex justify-between items-center">
-                                    <h3 className="text-xl font-semibold mb-2">{clientes[0].nome}</h3>
-                                    {clientes.length > 1 && (
-                                        <button onClick={() => toggleExpand(clientes[0].email)}>
-                                            {expandedClientes[clientes[0].email] ? <MdExpandLess size={24} /> : <MdExpandMore size={24} />}
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="text-gray-400 mb-1">{clientes[0].email}</p>
-                                {expandedClientes[clientes[0].email] && clientes.length > 1 ? (
-                                    <div className="mt-2">
-                                        {clientes.map((cliente) => (
-                                            <div key={cliente.id} className="mb-4">
-                                                <p className="text-sm text-gray-500 mb-2">
-                                                    {cliente.dataAgendamento} • {cliente.horaAgendamento}
-                                                </p>
-                                                <p className="text-sm text-gray-400 mb-2">
-                                                    Serviço: {getServiceName(cliente.servico)}
-                                                </p>
-                                                <p className="text-sm text-gray-400 mb-2">
-                                                    Preço: {formatPreco(cliente.preco)}
-                                                </p>
-                                                <div className="flex justify-between items-center mt-4">
-                                                    <span className={`px-2 py-1 rounded-full text-sm ${
-                                                        cliente.statusPagamento === 'Pago' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'
-                                                    }`}>
-                                                        {cliente.statusPagamento}
-                                                    </span>
-                                                    <div className="flex space-x-2">
-                                                        <button
-                                                            onClick={() => handleStatusChange(cliente, cliente.statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
-                                                            className={`p-2 rounded-full ${
-                                                                cliente.statusPagamento === 'Pago' ? 'bg-yellow-500' : 'bg-green-500'
-                                                            } hover:opacity-80 transition-opacity duration-300`}
-                                                        >
-                                                            {cliente.statusPagamento === 'Pago' ? <MdCancel size={20} /> : <MdCheck size={20} />}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleEdit(cliente)}
-                                                            className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
-                                                        >
-                                                            <MdEdit size={20} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(cliente)}
-                                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
-                                                        >
-                                                            <MdDelete size={20} />
-                                                        </button>
+                    <div className="space-y-6">
+                        {Object.entries(groupByDateAndEmail(Object.values(clientesPendentes).flat())).map(([date, clientesByEmail]) => (
+                            <div key={date} className="bg-gray-800 p-4 rounded-lg shadow-lg">
+                                <h2 className="text-lg font-semibold mb-2 text-gray-300">{date}</h2>
+                                <div className="space-y-4">
+                                    {Object.entries(clientesByEmail).map(([email, clientes]) => {
+                                        const key = `${email}-${date}`;
+                                        return (
+                                            <div key={email} className="bg-gray-700 p-4 rounded-lg">
+                                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                                                    <div className="flex flex-col items-start">
+                                                        <h3 className="text-xl font-semibold">{clientes[0].nome}</h3>
+                                                        <p className="text-gray-400">{email}</p>
                                                     </div>
+                                                    {clientes.length > 1 && (
+                                                        <button
+                                                            onClick={() => toggleExpand(email, date)}
+                                                            className="p-2 bg-gray-600 rounded-full hover:bg-gray-500 transition-colors duration-300"
+                                                        >
+                                                            {expandedClientes[key] ? <MdExpandLess size={20} /> : <MdExpandMore size={20} />}
+                                                        </button>
+                                                    )}
                                                 </div>
+                                                {expandedClientes[key] || clientes.length === 1 ? (
+                                                    <div className="mt-4 space-y-4">
+                                                        {clientes.map((cliente) => (
+                                                            <div key={cliente.id} className="bg-gray-600 p-4 rounded-lg">
+                                                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                                                                    <div className="flex flex-col items-start">
+                                                                        <p className="text-gray-400">{cliente.horaAgendamento}</p>
+                                                                        <p className="text-gray-400">Serviço: {getServiceName(cliente.servico)}</p>
+                                                                        <p className="text-gray-400">Preço: {formatPreco(cliente.preco)}</p>
+                                                                        <p className="text-gray-400">Status: {cliente.statusPagamento}</p>
+                                                                    </div>
+                                                                    <div className="flex space-x-2 items-center mt-2 md:mt-0">
+                                                                        {cliente.isConcluido && (
+                                                                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
+                                                                                Concluído
+                                                                            </span>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={() => handleStatusChange(cliente, cliente.statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
+                                                                            className={`p-2 rounded-full ${cliente.statusPagamento === 'Pago' ? 'bg-yellow-500' : 'bg-green-500'
+                                                                                } hover:opacity-80 transition-opacity duration-300`}
+                                                                        >
+                                                                            {cliente.statusPagamento === 'Pago' ? <MdCancel size={20} /> : <MdCheck size={20} />}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleEdit(cliente)}
+                                                                            className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
+                                                                        >
+                                                                            <MdEdit size={20} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDelete(cliente)}
+                                                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
+                                                                        >
+                                                                            <MdDelete size={20} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : null}
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="mt-2">
-                                        <div className="mb-4">
-                                            <p className="text-sm text-gray-500 mb-2">
-                                                {clientes[0].dataAgendamento} • {clientes[0].horaAgendamento}
-                                            </p>
-                                            <p className="text-sm text-gray-400 mb-2">
-                                                Serviço: {getServiceName(clientes[0].servico)}
-                                            </p>
-                                            <p className="text-sm text-gray-400 mb-2">
-                                                Preço: {formatPreco(clientes[0].preco)}
-                                            </p>
-                                            <div className="flex justify-between items-center mt-4">
-                                                <span className={`px-2 py-1 rounded-full text-sm ${
-                                                    clientes[0].statusPagamento === 'Pago' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'
-                                                }`}>
-                                                    {clientes[0].statusPagamento}
-                                                </span>
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={() => handleStatusChange(clientes[0], clientes[0].statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
-                                                        className={`p-2 rounded-full ${
-                                                            clientes[0].statusPagamento === 'Pago' ? 'bg-yellow-500' : 'bg-green-500'
-                                                        } hover:opacity-80 transition-opacity duration-300`}
-                                                    >
-                                                        {clientes[0].statusPagamento === 'Pago' ? <MdCancel size={20} /> : <MdCheck size={20} />}
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleEdit(clientes[0])}
-                                                        className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
-                                                    >
-                                                        <MdEdit size={20} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(clientes[0])}
-                                                        className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
-                                                    >
-                                                        <MdDelete size={20} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         ))}
                     </div>
                 )}
@@ -334,9 +352,8 @@ function Agendamentos() {
                         <button
                             key={i}
                             onClick={() => paginate(i + 1)}
-                            className={`mx-1 px-3 py-1 rounded ${
-                                currentPage === i + 1 ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
-                            } transition-colors duration-300`}
+                            className={`mx-1 px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
+                                } transition-colors duration-300`}
                         >
                             {i + 1}
                         </button>

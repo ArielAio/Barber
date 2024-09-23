@@ -149,6 +149,7 @@ const CalendarioConfig = () => {
                         isOpen={isModalOpen}
                         onClose={handleCloseModal}
                         cliente={selectedCliente}
+                        closeOnOutsideClick={true}
                     />
                 )}
             </AnimatePresence>

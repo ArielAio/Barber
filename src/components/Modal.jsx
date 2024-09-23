@@ -1,9 +1,29 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTimes, FaUser, FaEnvelope, FaCalendarAlt, FaClock, FaMoneyBillWave } from 'react-icons/fa';
 import moment from 'moment';
 
-const Modal = ({ isOpen, onClose, cliente }) => {
+const Modal = ({ isOpen, onClose, cliente, closeOnOutsideClick }) => {
+    const modalRef = useRef();
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (closeOnOutsideClick && modalRef.current && !modalRef.current.contains(event.target)) {
+                onClose();
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        } else {
+            document.removeEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen, closeOnOutsideClick, onClose]);
+
     if (!isOpen || !cliente) return null;
 
     const formatDate = (date) => {
@@ -54,6 +74,7 @@ const Modal = ({ isOpen, onClose, cliente }) => {
                     exit="hidden"
                 >
                     <motion.div
+                        ref={modalRef}
                         className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden"
                         variants={modal}
                     >
