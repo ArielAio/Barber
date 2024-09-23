@@ -9,7 +9,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import EventDetailsModal from './EventDetailsModal'; // Import the new component
 
+// Update the localizer to use Portuguese
 const localizer = momentLocalizer(moment);
+localizer.formats.monthHeaderFormat = (date) => format(date, 'MMMM yyyy', { locale: ptBR });
 
 const StyledCalendarWrapper = styled.div`
   .custom-calendar {
@@ -86,20 +88,16 @@ const CALENDAR_MESSAGES = {
 };
 
 const CALENDAR_FORMATS = {
-  monthHeaderFormat: (date, culture, localizer) =>
-    localizer.format(date, 'MMMM YYYY', culture),
-  dayHeaderFormat: (date, culture, localizer) =>
-    localizer.format(date, 'dddd, D MMM', culture),
-  dayRangeHeaderFormat: ({ start, end }, culture, localizer) =>
-    `${localizer.format(start, 'D MMM', culture)} - ${localizer.format(end, 'D MMM', culture)}`,
-  agendaHeaderFormat: ({ start, end }, culture, localizer) =>
-    `${localizer.format(start, 'D MMM', culture)} - ${localizer.format(end, 'D MMM', culture)}`,
-  agendaDateFormat: (date, culture, localizer) =>
-    localizer.format(date, 'ddd, D MMM', culture),
-  agendaTimeFormat: (date, culture, localizer) =>
-    localizer.format(date, 'HH:mm', culture),
-  agendaTimeRangeFormat: ({ start, end }, culture, localizer) =>
-    `${localizer.format(start, 'HH:mm', culture)} - ${localizer.format(end, 'HH:mm', culture)}`,
+  monthHeaderFormat: (date) => format(date, 'MMMM yyyy', { locale: ptBR }),
+  dayHeaderFormat: (date) => format(date, "EEEE, d 'de' MMMM", { locale: ptBR }),
+  dayRangeHeaderFormat: ({ start, end }) =>
+    `${format(start, "d 'de' MMMM", { locale: ptBR })} - ${format(end, "d 'de' MMMM", { locale: ptBR })}`,
+  agendaHeaderFormat: ({ start, end }) =>
+    `${format(start, "d 'de' MMMM", { locale: ptBR })} - ${format(end, "d 'de' MMMM", { locale: ptBR })}`,
+  agendaDateFormat: (date) => format(date, "EEE, d 'de' MMM", { locale: ptBR }),
+  agendaTimeFormat: (date) => format(date, 'HH:mm', { locale: ptBR }),
+  agendaTimeRangeFormat: ({ start, end }) =>
+    `${format(start, 'HH:mm', { locale: ptBR })} - ${format(end, 'HH:mm', { locale: ptBR })}`,
 };
 
 const AppointmentCalendar = ({ events }) => {
@@ -124,20 +122,35 @@ const AppointmentCalendar = ({ events }) => {
     };
   };
 
-  const CustomToolbar = ({ onNavigate, label }) => (
-    <div className="flex justify-between items-center mb-4 text-gray-800">
-      <div className="flex">
-        <button onClick={() => onNavigate('PREV')} className="text-2xl font-bold text-blue-600 mr-4 hover:text-blue-700 transition-colors">
-          <FaChevronLeft />
-        </button>
-        <button onClick={() => onNavigate('NEXT')} className="text-2xl font-bold text-blue-600 hover:text-blue-700 transition-colors">
-          <FaChevronRight />
-        </button>
-      </div>
-      <span className="text-xl font-semibold">{label}</span>
-      <button onClick={() => onNavigate('TODAY')} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+  const CustomToolbar = ({ onNavigate, label, onView, views }) => (
+    <div className="flex flex-col items-center mb-4 text-gray-800">
+      <button onClick={() => onNavigate('TODAY')} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors mb-4">
         Hoje
       </button>
+      <div className="flex flex-col sm:flex-row justify-between items-center w-full">
+        <div className="flex items-center mb-2 sm:mb-0">
+          <button onClick={() => onNavigate('PREV')} className="text-2xl font-bold text-blue-600 mr-2 hover:text-blue-700 transition-colors">
+            <FaChevronLeft />
+          </button>
+          <span className="text-xl font-semibold mx-2">{label}</span>
+          <button onClick={() => onNavigate('NEXT')} className="text-2xl font-bold text-blue-600 ml-2 hover:text-blue-700 transition-colors">
+            <FaChevronRight />
+          </button>
+        </div>
+        <div className="flex items-center mt-2 sm:mt-0">
+          {views.map(name => (
+            <button
+              key={name}
+              onClick={() => onView(name)}
+              className={`px-3 py-1 mx-1 rounded-md transition-colors ${
+                view === name ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              {name.charAt(0).toUpperCase() + name.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 
@@ -172,7 +185,7 @@ const AppointmentCalendar = ({ events }) => {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-3xl font-bold mb-6 flex items-center text-gray-800">
+        <h2 className="text-3xl font-bold mb-6 flex items-center justify-center text-gray-800">
           <FaCalendarAlt className="mr-3 text-blue-600" />
           Calendário de Agendamentos
         </h2>
@@ -184,7 +197,7 @@ const AppointmentCalendar = ({ events }) => {
             endAccessor="end"
             style={{ height: '100%' }}
             messages={CALENDAR_MESSAGES}
-            views={['month', 'week', 'day', 'agenda']}
+            views={['month', 'week', 'day']}
             formats={CALENDAR_FORMATS}
             components={{
               toolbar: CustomToolbar,

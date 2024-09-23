@@ -77,16 +77,17 @@ function Agendamentos() {
             }));
 
             const now = new Date();
-            const futureAgendamentos = agendamentosList.filter(agendamento =>
-                isAfter(agendamento.dataAgendamento.toDate(), now)
+            const oneDayAgo = subDays(now, 1);
+            const validAgendamentos = agendamentosList.filter(agendamento =>
+                isAfter(agendamento.dataAgendamento.toDate(), oneDayAgo)
             );
 
-            futureAgendamentos.sort((a, b) => a.dataAgendamento.toDate() - b.dataAgendamento.toDate());
-            setRecentAgendamento(futureAgendamentos[0] || null);
-            setAgendamentos(agendamentosList);
+            validAgendamentos.sort((a, b) => a.dataAgendamento.toDate() - b.dataAgendamento.toDate());
+            setRecentAgendamento(validAgendamentos[0] || null);
+            setAgendamentos(validAgendamentos);
 
             // Atualizar os eventos do calendário com o nome de usuário
-            const events = agendamentosList.map(agendamento => ({
+            const events = validAgendamentos.map(agendamento => ({
                 title: getServiceName(agendamento.servico),
                 start: agendamento.dataAgendamento.toDate(),
                 end: addHours(agendamento.dataAgendamento.toDate(), 1),

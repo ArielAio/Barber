@@ -7,8 +7,11 @@ import {
     isSunday, 
     isSameMonth, 
     isToday, 
-    isPast, 
-    set
+    isPast,
+    isFuture,
+    set,
+    startOfMonth,
+    endOfMonth
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
@@ -28,12 +31,21 @@ function DateModal({
         }
     };
 
+    const today = new Date();
+    const twoMonthsFromNow = endOfMonth(addMonths(today, 2));
+
     const handlePrevMonth = () => {
-        setCurrentMonth(prevMonth => subMonths(prevMonth, 1));
+        setCurrentMonth(prevMonth => {
+            const newMonth = subMonths(prevMonth, 1);
+            return newMonth >= startOfMonth(today) ? newMonth : prevMonth;
+        });
     };
 
     const handleNextMonth = () => {
-        setCurrentMonth(prevMonth => addMonths(prevMonth, 1));
+        setCurrentMonth(prevMonth => {
+            const newMonth = addMonths(prevMonth, 1);
+            return newMonth <= twoMonthsFromNow ? newMonth : prevMonth;
+        });
     };
 
     return (
@@ -79,7 +91,7 @@ function DateModal({
                                     <div key={day} className="text-center font-semibold text-gray-600">{day}</div>
                                 ))}
                                 {generateCalendarDays().map((date, index) => {
-                                    const isDisabled = isSunday(date) || isPast(set(date, { hours: 23, minutes: 59, seconds: 59 }));
+                                    const isDisabled = isSunday(date) || isPast(set(date, { hours: 23, minutes: 59, seconds: 59 })) || date > twoMonthsFromNow;
                                     const isCurrentMonth = isSameMonth(date, currentMonth);
                                     return (
                                         <button
