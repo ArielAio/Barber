@@ -315,10 +315,10 @@ function Agendamentos() {
                                                                         )}
                                                                         <button
                                                                             onClick={() => handleStatusChange(cliente, cliente.statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
-                                                                            className={`p-2 rounded-full ${cliente.statusPagamento === 'Pago' ? 'bg-yellow-500' : 'bg-green-500'
+                                                                            className={`p-2 rounded-full ${cliente.statusPagamento === 'Pago' ? 'bg-green-500' : 'bg-yellow-500'
                                                                                 } hover:opacity-80 transition-opacity duration-300`}
                                                                         >
-                                                                            {cliente.statusPagamento === 'Pago' ? <MdCancel size={20} /> : <MdCheck size={20} />}
+                                                                            {cliente.statusPagamento === 'Pago' ? <MdCheck size={20} /> : <MdCancel size={20} />}
                                                                         </button>
                                                                         <button
                                                                             onClick={() => handleEdit(cliente)}
