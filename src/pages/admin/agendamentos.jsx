@@ -280,12 +280,15 @@ function Agendamentos() {
                                 <div className="space-y-4">
                                     {Object.entries(clientesByEmail).map(([email, clientes]) => {
                                         const key = `${email}-${date}`;
+                                        const displayEmail = email && email !== 'undefined' && email !== 'null' && email.trim() !== '' 
+                                            ? email 
+                                            : "Sem email vinculado";
                                         return (
-                                            <div key={email} className="bg-gray-700 p-4 rounded-lg">
+                                            <div key={key} className="bg-gray-700 p-4 rounded-lg">
                                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
                                                     <div className="flex flex-col items-start">
                                                         <h3 className="text-xl font-semibold">{clientes[0].nome}</h3>
-                                                        <p className="text-gray-400">{email}</p>
+                                                        <p className="text-gray-400">{displayEmail}</p>
                                                     </div>
                                                     {clientes.length > 1 && (
                                                         <button
