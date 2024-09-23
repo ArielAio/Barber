@@ -142,12 +142,12 @@ const AppointmentCalendar = ({ events }) => {
   );
 
   const CustomEvent = ({ event }) => {
-    const title = event.title ? event.title.split(' ')[0] : 'Evento';
-    const service = event.service ? event.service.split(' ')[0] : '';
+    // Simplify the service name for calendar display
+    const simplifiedService = event.title.includes('Cabelo') ? 'Cabelo' : 'Barba';
 
     return (
-      <div className="text-xs leading-tight" title={`${event.title || ''} ${event.service ? '- ' + event.service : ''}`}>
-        {title}{service && ` - ${service}`}
+      <div className="text-xs leading-tight" title={`${event.title}`}>
+        {simplifiedService}
       </div>
     );
   };

@@ -5,7 +5,7 @@ import { getFirestore, collection, getDocs, updateDoc, doc, deleteDoc, getDoc } 
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import app from '../../lib/firebase';
 import moment from 'moment-timezone';
-import { MdCheck, MdCancel, MdEdit, MdDelete, MdSearch, MdAdd, MdFilterList } from 'react-icons/md';
+import { MdCheck, MdCancel, MdEdit, MdDelete, MdSearch, MdAdd, MdFilterList, MdExpandMore, MdExpandLess } from 'react-icons/md';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../../components/Footer';
@@ -21,6 +21,7 @@ function Agendamentos() {
     const [role, setRole] = useState(null);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [servicosData, setServicosData] = useState({});
+    const [expandedClientes, setExpandedClientes] = useState({});
     const router = useRouter();
     const auth = getAuth(app);
     const db = getFirestore(app);
@@ -68,10 +69,21 @@ function Agendamentos() {
             );
         }
 
-        // Ordena por data e hora
-        clientesData.sort((a, b) => a.dataHoraUTC - b.dataHoraUTC);
+        // Agrupa por email
+        const groupedClientes = clientesData.reduce((acc, cliente) => {
+            if (!acc[cliente.email]) {
+                acc[cliente.email] = [];
+            }
+            acc[cliente.email].push(cliente);
+            return acc;
+        }, {});
 
-        setClientesPendentes(clientesData);
+        // Ordena por data e hora
+        Object.values(groupedClientes).forEach(group => {
+            group.sort((a, b) => a.dataHoraUTC - b.dataHoraUTC);
+        });
+
+        setClientesPendentes(groupedClientes);
         setLoading(false);
     }, [statusFilter, searchTerm, db]);
 
@@ -115,7 +127,7 @@ function Agendamentos() {
 
     const indexOfLastCliente = currentPage * clientesPerPage;
     const indexOfFirstCliente = indexOfLastCliente - clientesPerPage;
-    const currentClientes = clientesPendentes.slice(indexOfFirstCliente, indexOfLastCliente);
+    const currentClientes = Object.values(clientesPendentes).slice(indexOfFirstCliente, indexOfLastCliente);
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -136,6 +148,13 @@ function Agendamentos() {
             return `R$ ${preco.toFixed(2).replace('.', ',')}`;
         }
         return 'Preço não especificado';
+    };
+
+    const toggleExpand = (email) => {
+        setExpandedClientes(prevState => ({
+            ...prevState,
+            [email]: !prevState[email]
+        }));
     };
 
     if (role === null) {
@@ -195,65 +214,123 @@ function Agendamentos() {
 
                 {loading ? (
                     <LoadingSpinner />
-                ) : clientesPendentes.length === 0 ? (
+                ) : Object.keys(clientesPendentes).length === 0 ? (
                     <p className="text-center text-gray-400">Nenhum agendamento encontrado.</p>
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {currentClientes.map((cliente, index) => (
+                        {currentClientes.map((clientes, index) => (
                             <motion.div
-                                key={cliente.id}
+                                key={clientes[0].email}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3, delay: index * 0.1 }}
                                 className="bg-gray-800 p-4 rounded-lg shadow-lg"
                             >
-                                <h3 className="text-xl font-semibold mb-2">{cliente.nome}</h3>
-                                <p className="text-gray-400 mb-1">{cliente.email}</p>
-                                <p className="text-sm text-gray-500 mb-2">
-                                    {cliente.dataAgendamento} • {cliente.horaAgendamento}
-                                </p>
-                                <p className="text-sm text-gray-400 mb-2">
-                                    Serviço: {getServiceName(cliente.servico)}
-                                </p>
-                                <p className="text-sm text-gray-400 mb-2">
-                                    Preço: {formatPreco(cliente.preco)}
-                                </p>
-                                <div className="flex justify-between items-center mt-4">
-                                    <span className={`px-2 py-1 rounded-full text-sm ${
-                                        cliente.statusPagamento === 'Pago' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'
-                                    }`}>
-                                        {cliente.statusPagamento}
-                                    </span>
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={() => handleStatusChange(cliente, cliente.statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
-                                            className={`p-2 rounded-full ${
-                                                cliente.statusPagamento === 'Pago' ? 'bg-yellow-500' : 'bg-green-500'
-                                            } hover:opacity-80 transition-opacity duration-300`}
-                                        >
-                                            {cliente.statusPagamento === 'Pago' ? <MdCancel size={20} /> : <MdCheck size={20} />}
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-xl font-semibold mb-2">{clientes[0].nome}</h3>
+                                    {clientes.length > 1 && (
+                                        <button onClick={() => toggleExpand(clientes[0].email)}>
+                                            {expandedClientes[clientes[0].email] ? <MdExpandLess size={24} /> : <MdExpandMore size={24} />}
                                         </button>
-                                        <button
-                                            onClick={() => handleEdit(cliente)}
-                                            className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
-                                        >
-                                            <MdEdit size={20} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(cliente)}
-                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
-                                        >
-                                            <MdDelete size={20} />
-                                        </button>
-                                    </div>
+                                    )}
                                 </div>
+                                <p className="text-gray-400 mb-1">{clientes[0].email}</p>
+                                {expandedClientes[clientes[0].email] && clientes.length > 1 ? (
+                                    <div className="mt-2">
+                                        {clientes.map((cliente) => (
+                                            <div key={cliente.id} className="mb-4">
+                                                <p className="text-sm text-gray-500 mb-2">
+                                                    {cliente.dataAgendamento} • {cliente.horaAgendamento}
+                                                </p>
+                                                <p className="text-sm text-gray-400 mb-2">
+                                                    Serviço: {getServiceName(cliente.servico)}
+                                                </p>
+                                                <p className="text-sm text-gray-400 mb-2">
+                                                    Preço: {formatPreco(cliente.preco)}
+                                                </p>
+                                                <div className="flex justify-between items-center mt-4">
+                                                    <span className={`px-2 py-1 rounded-full text-sm ${
+                                                        cliente.statusPagamento === 'Pago' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'
+                                                    }`}>
+                                                        {cliente.statusPagamento}
+                                                    </span>
+                                                    <div className="flex space-x-2">
+                                                        <button
+                                                            onClick={() => handleStatusChange(cliente, cliente.statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
+                                                            className={`p-2 rounded-full ${
+                                                                cliente.statusPagamento === 'Pago' ? 'bg-yellow-500' : 'bg-green-500'
+                                                            } hover:opacity-80 transition-opacity duration-300`}
+                                                        >
+                                                            {cliente.statusPagamento === 'Pago' ? <MdCancel size={20} /> : <MdCheck size={20} />}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleEdit(cliente)}
+                                                            className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
+                                                        >
+                                                            <MdEdit size={20} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(cliente)}
+                                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
+                                                        >
+                                                            <MdDelete size={20} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="mt-2">
+                                        <div className="mb-4">
+                                            <p className="text-sm text-gray-500 mb-2">
+                                                {clientes[0].dataAgendamento} • {clientes[0].horaAgendamento}
+                                            </p>
+                                            <p className="text-sm text-gray-400 mb-2">
+                                                Serviço: {getServiceName(clientes[0].servico)}
+                                            </p>
+                                            <p className="text-sm text-gray-400 mb-2">
+                                                Preço: {formatPreco(clientes[0].preco)}
+                                            </p>
+                                            <div className="flex justify-between items-center mt-4">
+                                                <span className={`px-2 py-1 rounded-full text-sm ${
+                                                    clientes[0].statusPagamento === 'Pago' ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'
+                                                }`}>
+                                                    {clientes[0].statusPagamento}
+                                                </span>
+                                                <div className="flex space-x-2">
+                                                    <button
+                                                        onClick={() => handleStatusChange(clientes[0], clientes[0].statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
+                                                        className={`p-2 rounded-full ${
+                                                            clientes[0].statusPagamento === 'Pago' ? 'bg-yellow-500' : 'bg-green-500'
+                                                        } hover:opacity-80 transition-opacity duration-300`}
+                                                    >
+                                                        {clientes[0].statusPagamento === 'Pago' ? <MdCancel size={20} /> : <MdCheck size={20} />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleEdit(clientes[0])}
+                                                        className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
+                                                    >
+                                                        <MdEdit size={20} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(clientes[0])}
+                                                        className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
+                                                    >
+                                                        <MdDelete size={20} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </motion.div>
                         ))}
                     </div>
                 )}
 
                 <div className="mt-6 flex justify-center">
-                    {Array.from({ length: Math.ceil(clientesPendentes.length / clientesPerPage) }, (_, i) => (
+                    {Array.from({ length: Math.ceil(Object.keys(clientesPendentes).length / clientesPerPage) }, (_, i) => (
                         <button
                             key={i}
                             onClick={() => paginate(i + 1)}

@@ -262,9 +262,9 @@ function Agendamentos() {
 
     const getServiceName = (serviceId) => {
         const serviceNames = {
-            corte_cabelo: 'Cabelo',
-            corte_barba: 'Barba',
-            corte_cabelo_barba: 'Cabelo e Barba'
+            corte_cabelo: 'Corte de Cabelo',
+            corte_barba: 'Corte de Barba',
+            corte_cabelo_barba: 'Corte de Cabelo e Barba'
         };
         return serviceNames[serviceId] || serviceId;
     };
@@ -283,6 +283,17 @@ function Agendamentos() {
             >
                 Meus Agendamentos
             </motion.h1>
+
+            {/* New button for creating an appointment */}
+            <motion.button
+                onClick={() => router.push('/user/cadastro')}
+                className="mb-8 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 ease-in-out"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+            >
+                <FaCalendarAlt className="inline-block mr-2" />
+                Novo Agendamento
+            </motion.button>
 
             {feedbackMessage && (
                 <motion.div
@@ -324,22 +335,24 @@ function Agendamentos() {
 
             {agendamentos.length === 0 && (
                 <motion.div
-                    className="w-full max-w-lg bg-opacity-80 bg-red-500 p-4 rounded-lg shadow-lg mb-8 text-center"
+                    className="w-full max-w-lg bg-opacity-90 bg-red-600 p-6 rounded-lg shadow-lg mb-8 text-center"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                 >
-                    <FaCalendarTimes className="text-4xl mb-4" />
-                    Nenhum agendamento cadastrado.
-                    <motion.button
-                        onClick={() => router.push('/user/cadastro')}
-                        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        <FaCalendarAlt className="inline-block mr-2" />
-                        Cadastrar Novo Agendamento
-                    </motion.button>
+                    <div className="flex flex-col items-center">
+                        <FaCalendarTimes className="text-6xl mb-4 text-red-200" />
+                        <h3 className="text-2xl font-bold mb-2">Nenhum Agendamento</h3>
+                        <p className="text-lg text-red-100">
+                            Você ainda não possui agendamentos cadastrados.
+                        </p>
+                        <button 
+                            onClick={() => router.push('/user/cadastro')}
+                            className="mt-4 bg-white text-red-600 font-bold py-2 px-4 rounded-full hover:bg-red-100 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-300"
+                        >
+                            Agendar Agora
+                        </button>
+                    </div>
                 </motion.div>
             )}
 
