@@ -46,28 +46,35 @@ const AuthAction = () => {
       return;
     }
     try {
-      const result = await signInWithEmailLink(auth, email, window.location.href);
-      const user = result.user;
-      
+      // Verificar se o usuário já existe
+      const userCredential = await signInWithEmailLink(auth, email, window.location.href);
+      const user = userCredential.user;
+
       if (user) {
+        // Atualizar o perfil do usuário com o nome
         await updateProfile(user, { displayName: name });
-        
+
+        // Criar ou atualizar o documento do usuário no Firestore
         await setDoc(doc(db, 'users', user.uid), {
           username: name,
           email: user.email,
           role: 'user',
           emailVerified: true,
-        });
-        
+        }, { merge: true });
+
         window.localStorage.removeItem('emailForSignIn');
         setSuccess('Conta verificada com sucesso!');
         setShowModal(true);
       } else {
-        throw new Error('User not found after sign-in');
+        throw new Error('Usuário não encontrado após o login');
       }
     } catch (error) {
       console.error('Erro durante a verificação de email:', error);
-      setError('Ocorreu um erro ao verificar seu e-mail. O link pode ter expirado ou ser inválido.');
+      if (error.code === 'auth/invalid-action-code') {
+        setError('O link de verificação é inválido ou já foi usado. Por favor, solicite um novo link de verificação.');
+      } else {
+        setError('Ocorreu um erro ao verificar seu e-mail. O link pode ter expirado ou ser inválido.');
+      }
     }
   };
 
