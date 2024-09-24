@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useRouter } from 'next/router';
 import { FaUser, FaEnvelope, FaLock, FaTrash } from 'react-icons/fa';
 import Footer from '../components/Footer';
+import SuccessModal from '../components/SuccessModal'; // Import SuccessModal
 
 const Conta = () => {
   const [userData, setUserData] = useState(null);
@@ -14,6 +15,8 @@ const Conta = () => {
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false); // State for SuccessModal
+  const [successMessage, setSuccessMessage] = useState(''); // State for success message
   const auth = getAuth();
   const router = useRouter();
 
@@ -60,7 +63,8 @@ const Conta = () => {
         await reauthenticateWithCredential(user, credential);
 
         await updatePassword(user, newPassword);
-        alert('Senha alterada com sucesso!');
+        setSuccessMessage('Senha alterada com sucesso!');
+        setIsSuccessModalOpen(true);
         setNewPassword('');
         setCurrentPassword('');
         setError('');
@@ -76,7 +80,8 @@ const Conta = () => {
       const user = auth.currentUser;
       if (user) {
         await sendPasswordResetEmail(auth, user.email);
-        alert('Email de redefinição de senha enviado.');
+        setSuccessMessage('Email de redefinição de senha enviado.');
+        setIsSuccessModalOpen(true);
       }
     } catch (error) {
       console.error('Erro ao enviar email de redefinição de senha:', error);
@@ -94,7 +99,8 @@ const Conta = () => {
         try {
           await deleteDoc(doc(db, 'users', uid));
           await deleteUser(user);
-          alert('Sua conta foi excluída com sucesso.');
+          setSuccessMessage('Sua conta foi excluída com sucesso.');
+          setIsSuccessModalOpen(true);
           router.push('/login');
         } catch (error) {
           console.error('Erro ao excluir a conta:', error);
@@ -162,14 +168,14 @@ const Conta = () => {
                     placeholder="Senha Atual"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full rounded-lg border border-gray-600 px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-gray-700"
+                    className="w-full text-white rounded-lg border border-gray-600 px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-gray-700"
                   />
                   <input
                     type="password"
                     placeholder="Nova Senha"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full rounded-lg border border-gray-600 px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-gray-700"
+                    className="w-full text-white rounded-lg border border-gray-600 px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 bg-gray-700"
                   />
                   <div className="flex space-x-4">
                     <button
@@ -209,6 +215,11 @@ const Conta = () => {
         )}
       </div>
       <Footer />
+      <SuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        message={successMessage}
+      />
     </div>
   );
 };

@@ -2,17 +2,19 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { FaCut, FaUserTie, FaUserAlt } from 'react-icons/fa'; // Import icons
 import UserHeader from '../components/UserHeader';
 import Footer from '../components/Footer';
+
+// Import Flaticon icons
+import { GiBeard, GiHairStrands, GiRazor } from 'react-icons/gi';
 
 function Servicos() {
   const router = useRouter();
 
   const services = [
-    { id: 'corte_cabelo', name: 'Corte de Cabelo', price: 'R$ 35,00', icon: <FaCut size={50} /> }, // Ícones maiores
-    { id: 'corte_barba', name: 'Corte de Barba', price: 'R$ 25,00', icon: <FaUserTie size={50} /> },
-    { id: 'corte_cabelo_barba', name: 'Corte de Cabelo e Barba', price: 'R$ 50,00', icon: <FaUserAlt size={50} /> },
+    { id: 'corte_cabelo', name: 'Corte de Cabelo', price: 'R$ 35,00', icon: <GiHairStrands size={50} /> }, // Icon for hair cut
+    { id: 'corte_barba', name: 'Corte de Barba', price: 'R$ 25,00', icon: <GiBeard size={50} /> }, // Icon for beard cut
+    { id: 'corte_cabelo_barba', name: 'Corte de Cabelo e Barba', price: 'R$ 50,00', icon: <GiRazor size={50} /> }, // Icon for hair and beard cut
   ];
 
   const containerVariants = {
