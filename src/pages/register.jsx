@@ -26,31 +26,13 @@ const Register = () => {
     }
     try {
       const actionCodeSettings = {
-        url: `${window.location.origin}/auth-action?name=${encodeURIComponent(name)}`,
+        url: `${window.location.origin}/auth-action?name=${encodeURIComponent(name)}&password=${encodeURIComponent(password)}`,
         handleCodeInApp: true
       };
 
-      try {
-        // Tenta enviar o link de autenticação por e-mail
-        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-        window.localStorage.setItem('emailForSignIn', email);
-        setVerificationSent(true);
-      } catch (linkError) {
-        // Se falhar, cria o usuário com e-mail e senha e envia um e-mail de verificação padrão
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(userCredential.user);
-        
-        // Cria o documento do usuário no Firestore
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-          username: name,
-          email: email,
-          role: 'user',
-          emailVerified: false,
-        });
-
-        setVerificationSent(true);
-      }
-      
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      window.localStorage.setItem('emailForSignIn', email);
+      setVerificationSent(true);
       setError('');
     } catch (err) {
       setError(translateFirebaseError(err.code));

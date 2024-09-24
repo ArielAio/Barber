@@ -46,24 +46,26 @@ const AuthAction = () => {
       return;
     }
     try {
-      // Verificar se o usuário já existe
       const userCredential = await signInWithEmailLink(auth, email, window.location.href);
       const user = userCredential.user;
 
       if (user) {
+        // Criar a conta com e-mail e senha
+        await createUserWithEmailAndPassword(auth, email, password);
+
         // Atualizar o perfil do usuário com o nome
         await updateProfile(user, { displayName: name });
 
-        // Criar ou atualizar o documento do usuário no Firestore
+        // Criar o documento do usuário no Firestore
         await setDoc(doc(db, 'users', user.uid), {
           username: name,
           email: user.email,
           role: 'user',
           emailVerified: true,
-        }, { merge: true });
+        });
 
         window.localStorage.removeItem('emailForSignIn');
-        setSuccess('Conta verificada com sucesso!');
+        setSuccess('Conta verificada e criada com sucesso!');
         setShowModal(true);
       } else {
         throw new Error('Usuário não encontrado após o login');
