@@ -20,7 +20,7 @@ const AuthAction = () => {
 
   useEffect(() => {
     const handleAction = async () => {
-      if (isSignInWithEmailLink(auth, window.location.href)) {
+      if (mode === 'verifyEmail' && isSignInWithEmailLink(auth, window.location.href)) {
         setActionType('verifyEmail');
         await verifyEmailAndCreateAccount();
       } else if (mode === 'resetPassword' && oobCode) {
@@ -28,6 +28,8 @@ const AuthAction = () => {
         await verifyPasswordResetCode(auth, oobCode)
           .then(() => setIsCodeValid(true))
           .catch(() => setError('Código de redefinição de senha inválido ou expirado.'));
+      } else {
+        setError('Ação inválida ou link expirado.');
       }
     };
 
@@ -39,18 +41,17 @@ const AuthAction = () => {
     if (!email) {
       email = window.prompt('Por favor, forneça seu email para confirmação');
     }
+    if (!email) {
+      setError('Email não fornecido. Não é possível verificar a conta.');
+      return;
+    }
     try {
-      // First, complete the sign-in process
-      await signInWithEmailLink(auth, email, window.location.href);
-      
-      // Get the current user
-      const user = auth.currentUser;
+      const result = await signInWithEmailLink(auth, email, window.location.href);
+      const user = result.user;
       
       if (user) {
-        // Update the user's profile
         await updateProfile(user, { displayName: name });
         
-        // Set the user document in Firestore
         await setDoc(doc(db, 'users', user.uid), {
           username: name,
           email: user.email,
@@ -59,14 +60,14 @@ const AuthAction = () => {
         });
         
         window.localStorage.removeItem('emailForSignIn');
-        setSuccess('Conta criada com sucesso!');
+        setSuccess('Conta verificada com sucesso!');
         setShowModal(true);
       } else {
         throw new Error('User not found after sign-in');
       }
     } catch (error) {
-      console.error('Erro durante a verificação de email e criação de conta:', error);
-      setError('Ocorreu um erro ao verificar seu e-mail e criar sua conta.');
+      console.error('Erro durante a verificação de email:', error);
+      setError('Ocorreu um erro ao verificar seu e-mail. O link pode ter expirado ou ser inválido.');
     }
   };
 
