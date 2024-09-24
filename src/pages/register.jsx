@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import app from '../lib/firebase';
@@ -13,7 +13,6 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [verificationSent, setVerificationSent] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
   const db = getFirestore(app);
@@ -29,19 +28,14 @@ const Register = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Enviar e-mail de verificação
-      await sendEmailVerification(user);
-
       // Criar documento do usuário no Firestore
       await setDoc(doc(db, 'users', user.uid), {
         username: name,
         email: user.email,
         role: 'user',
-        emailVerified: false,
       });
 
-      setVerificationSent(true);
-      setError('');
+      router.push('/');
     } catch (err) {
       setError(translateFirebaseError(err.code));
     }
@@ -57,26 +51,12 @@ const Register = () => {
           username: user.displayName || '',
           email: user.email,
           role: 'user',
-          emailVerified: user.emailVerified,
         },
         { merge: true }
       );
-      if (!user.emailVerified) {
-        setError('Por favor, verifique seu e-mail antes de fazer login.');
-        return;
-      }
-      await redirectUser(user.uid);
+      router.push('/');
     } catch (err) {
       setError(translateFirebaseError(err.code));
-    }
-  };
-
-  const redirectUser = async (userId) => {
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    if (userDoc.exists() && userDoc.data().emailVerified) {
-      router.push('/');
-    } else {
-      setError('Por favor, verifique seu e-mail antes de fazer login.');
     }
   };
 
@@ -119,46 +99,32 @@ const Register = () => {
             </div>
           )}
           
-          {verificationSent ? (
-            <motion.div
-              className="bg-green-800 border border-green-600 text-green-100 px-4 py-3 rounded-md mb-6"
-              role="alert"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <span className="block sm:inline">
-                Um e-mail de verificação foi enviado. Por favor, verifique sua caixa de entrada e clique no link para ativar sua conta.
-              </span>
-            </motion.div>
-          ) : (
-            <motion.form 
-              className="space-y-6" 
-              onSubmit={handleRegister}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="name" className="sr-only">
-                    Nome
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FaUser className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="name"
-                      name="name"
-                      type="text"
-                      required
-                      className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                      placeholder="Seu nome"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
+          <motion.form 
+            className="space-y-6" 
+            onSubmit={handleRegister}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+          >
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="sr-only">
+                  Nome
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaUser className="h-5 w-5 text-gray-400" />
                   </div>
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    required
+                    className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Seu nome"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label htmlFor="email-address" className="sr-only">
@@ -216,7 +182,6 @@ const Register = () => {
                 </motion.button>
               </div>
             </motion.form>
-          )}
           
           <motion.div 
             className="mt-6"
