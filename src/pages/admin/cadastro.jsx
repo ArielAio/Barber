@@ -14,6 +14,7 @@ import { ptBR } from 'date-fns/locale';
 import DateModal from '../../components/DateModal';
 import TimeModal from '../../components/TimeModal';
 import Footer from '../../components/Footer';
+import SuccessModal from '../../components/SuccessModal';
 
 function Cadastro() {
     const router = useRouter();
@@ -35,6 +36,7 @@ function Cadastro() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [scheduledTimes, setScheduledTimes] = useState([]);
     const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     const servicoPrecosMap = {
         corte_cabelo: 'R$ 35,00',
@@ -211,7 +213,7 @@ function Cadastro() {
 
             await addDoc(collection(db, "agendamentos"), agendamentoData);
 
-            alert('Agendamento cadastrado com sucesso!');
+            setShowSuccessModal(true);
             setFormData({
                 nome: '',
                 email: '',
@@ -221,7 +223,6 @@ function Cadastro() {
                 preco: ''
             });
             setError('');
-            router.push('/admin');
         } catch (error) {
             console.error('Erro ao cadastrar Agendamento:', error);
             setError('Erro ao cadastrar Agendamento. Tente novamente.');
@@ -385,6 +386,16 @@ function Cadastro() {
                 horarios={horarios}
                 scheduledTimes={scheduledTimes}
                 isLoadingHorarios={isLoadingHorarios}
+            />
+
+            <SuccessModal
+                isOpen={showSuccessModal}
+                onClose={() => {
+                    setShowSuccessModal(false);
+                    router.push('/admin');
+                }}
+                message="Agendamento cadastrado com sucesso!"
+                autoCloseTime={2000}
             />
 
             <Footer />

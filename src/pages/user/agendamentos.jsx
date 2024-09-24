@@ -12,6 +12,8 @@ import DateModal from '../../components/DateModal';
 import TimeModal from '../../components/TimeModal';
 import AppointmentCalendar from '../../components/AppointmentCalendar';
 import Footer from '../../components/Footer';
+import ConfirmationModal from '../../components/ConfirmationModal';
+import SuccessModal from '../../components/SuccessModal';
 
 function Agendamentos() {
     const [agendamentos, setAgendamentos] = useState([]);
@@ -38,6 +40,12 @@ function Agendamentos() {
     const editFormRef = useRef(null);
     const [progress, setProgress] = useState(0);
     const progressIntervalRef = useRef(null);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [confirmAction, setConfirmAction] = useState(null);
+    const [selectedAgendamentoId, setSelectedAgendamentoId] = useState(null);
+    const [updatedAgendamento, setUpdatedAgendamento] = useState(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -189,7 +197,13 @@ function Agendamentos() {
         setShowTimeModal(false);
     };
 
-    const handleUpdate = async (e) => {
+    const handleConfirmDelete = (agendamentoId) => {
+        setSelectedAgendamentoId(agendamentoId);
+        setConfirmAction('delete');
+        setIsConfirmModalOpen(true);
+    };
+
+    const handleConfirmUpdate = (e) => {
         e.preventDefault();
         const selectedDate = new Date(`${dataAgendamento}T${horario}`);
         const now = new Date();
@@ -199,51 +213,54 @@ function Agendamentos() {
             return;
         }
 
-        if (window.confirm('Tem certeza que deseja atualizar este agendamento?')) {
-            try {
-                const agendamentoRef = doc(db, 'agendamentos', selectedAgendamento.id);
-                const dataAgendamentoMoment = new Date(`${dataAgendamento}T${horario}`);
+        setUpdatedAgendamento({
+            id: selectedAgendamento.id,
+            nome,
+            dataAgendamento: selectedDate
+        });
+        setConfirmAction('update');
+        setIsConfirmModalOpen(true);
+    };
 
-                await updateDoc(agendamentoRef, {
-                    nome,
-                    dataAgendamento: dataAgendamentoMoment
-                });
-                setSelectedAgendamento(null);
-                setNome('');
-                setDataAgendamento('');
-                setHorario('');
-                setFeedbackMessage('Agendamento atualizado com sucesso!');
-                await fetchAgendamentos(userEmail);
-            } catch (error) {
-                console.error('Erro ao atualizar o agendamento:', error);
-                setFeedbackMessage('Erro ao atualizar o agendamento.');
-            }
+    const handleConfirmAction = async () => {
+        if (confirmAction === 'delete') {
+            await handleCancel(selectedAgendamentoId);
+        } else if (confirmAction === 'update') {
+            await handleUpdate();
+        }
+        setIsConfirmModalOpen(false);
+    };
+
+    const handleUpdate = async () => {
+        try {
+            const agendamentoRef = doc(db, 'agendamentos', updatedAgendamento.id);
+            await updateDoc(agendamentoRef, {
+                nome: updatedAgendamento.nome,
+                dataAgendamento: updatedAgendamento.dataAgendamento
+            });
+            setSelectedAgendamento(null);
+            setNome('');
+            setDataAgendamento('');
+            setHorario('');
+            setSuccessMessage('Seu agendamento foi atualizado com sucesso!');
+            setIsSuccessModalOpen(true);
+            await fetchAgendamentos(userEmail);
+        } catch (error) {
+            console.error('Erro ao atualizar o agendamento:', error);
+            setFeedbackMessage('Erro ao atualizar o agendamento.');
         }
     };
 
     const handleCancel = async (agendamentoId) => {
-        if (window.confirm('Tem certeza que deseja cancelar este agendamento?')) {
-            try {
-                const agendamentoRef = doc(db, 'agendamentos', agendamentoId);
-                await deleteDoc(agendamentoRef);
-                setFeedbackMessage('Agendamento cancelado com sucesso!');
-                await fetchAgendamentos(userEmail);
-
-                setProgress(0);
-                progressIntervalRef.current = setInterval(() => {
-                    setProgress((prev) => {
-                        if (prev >= 100) {
-                            clearInterval(progressIntervalRef.current);
-                            setFeedbackMessage('');
-                            return 100;
-                        }
-                        return prev + 2;
-                    });
-                }, 100);
-            } catch (error) {
-                console.error('Erro ao cancelar o agendamento:', error);
-                setFeedbackMessage('Erro ao cancelar o agendamento.');
-            }
+        try {
+            const agendamentoRef = doc(db, 'agendamentos', agendamentoId);
+            await deleteDoc(agendamentoRef);
+            setSuccessMessage('Seu agendamento foi cancelado com sucesso.');
+            setIsSuccessModalOpen(true);
+            await fetchAgendamentos(userEmail);
+        } catch (error) {
+            console.error('Erro ao cancelar o agendamento:', error);
+            setFeedbackMessage('Erro ao cancelar o agendamento.');
         }
     };
 
@@ -337,7 +354,7 @@ function Agendamentos() {
                         <p className="text-lg text-red-100">
                             Você ainda não possui agendamentos cadastrados.
                         </p>
-                        <button 
+                        <button
                             onClick={() => router.push('/user/cadastro')}
                             className="mt-4 bg-white text-red-600 font-bold py-2 px-4 rounded-full hover:bg-red-100 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-300"
                         >
@@ -359,7 +376,7 @@ function Agendamentos() {
                         <FaEdit className="mr-2 text-yellow-400" />
                         Editar Agendamento
                     </h2>
-                    <form onSubmit={handleUpdate}>
+                    <form onSubmit={handleConfirmUpdate}>
                         <label htmlFor="nome" className="block text-lg">Nome:</label>
                         <input
                             type="text"
@@ -430,15 +447,12 @@ function Agendamentos() {
                             <div className="mt-4 flex justify-end space-x-2">
                                 <button
                                     onClick={() => handleEdit(agendamento)}
-                                    className={`${editingAgendamentoId === agendamento.id
-                                        ? 'bg-gray-500 hover:bg-gray-600'
-                                        : 'bg-yellow-500 hover:bg-yellow-600'
-                                        } text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400`}
+                                    className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400"
                                 >
                                     <FaEdit className="mr-2 inline-block" /> Editar
                                 </button>
                                 <button
-                                    onClick={() => handleCancel(agendamento.id)}
+                                    onClick={() => handleConfirmDelete(agendamento.id)}
                                     className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-red-400"
                                 >
                                     <FaTrashAlt className="mr-2 inline-block" /> Cancelar
@@ -473,6 +487,24 @@ function Agendamentos() {
                 scheduledTimes={scheduledTimes}
                 isLoadingHorarios={isLoadingHorarios}
             />
+
+            <ConfirmationModal
+                isOpen={isConfirmModalOpen}
+                onClose={() => setIsConfirmModalOpen(false)}
+                onConfirm={handleConfirmAction}
+                title={confirmAction === 'delete' ? 'Cancelar Agendamento' : 'Atualizar Agendamento'}
+                message={confirmAction === 'delete'
+                    ? 'Tem certeza que deseja cancelar este agendamento?'
+                    : 'Tem certeza que deseja atualizar este agendamento?'}
+                confirmText={confirmAction === 'delete' ? 'Cancelar Agendamento' : 'Atualizar Agendamento'}
+            />
+
+            <SuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                message={successMessage}
+            />
+
             <Footer />
         </div>
     );

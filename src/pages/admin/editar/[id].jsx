@@ -12,6 +12,7 @@ import LoadingSpinner from '../../../components/LoadingSpinner';
 import DateModal from '../../../components/DateModal';
 import TimeModal from '../../../components/TimeModal';
 import { startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
+import SuccessModal from '../../../components/SuccessModal';
 
 function EditarCliente() {
     const router = useRouter();
@@ -30,6 +31,7 @@ function EditarCliente() {
     const [isLoading, setIsLoading] = useState(true);
     const [scheduledTimes, setScheduledTimes] = useState([]);
     const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     const db = getFirestore(app);
 
@@ -171,8 +173,7 @@ function EditarCliente() {
 
             await updateDoc(clienteRef, updatedData);
 
-            alert('Dados do cliente atualizados com sucesso!');
-            router.push('/admin/agendamentos');
+            setShowSuccessModal(true);
         } catch (error) {
             console.error('Erro ao atualizar cliente:', error);
             setError('Erro ao atualizar cliente. Tente novamente.');
@@ -284,6 +285,16 @@ function EditarCliente() {
                 horarios={horarios}
                 scheduledTimes={scheduledTimes}
                 isLoadingHorarios={isLoadingHorarios}
+            />
+
+            <SuccessModal
+                isOpen={showSuccessModal}
+                onClose={() => {
+                    setShowSuccessModal(false);
+                    router.push('/admin/agendamentos');
+                }}
+                message="Dados do cliente atualizados com sucesso!"
+                autoCloseTime={2000}
             />
         </div>
     );

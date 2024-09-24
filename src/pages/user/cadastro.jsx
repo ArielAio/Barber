@@ -1,19 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { getFirestore, collection, addDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import app from '../../lib/firebase';
 import moment from 'moment-timezone';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaArrowLeft, FaCut, FaCheckCircle } from 'react-icons/fa';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO, isEqual } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import DateModal from '../../components/DateModal';
 import TimeModal from '../../components/TimeModal';
 import Footer from '../../components/Footer';
+// Importe o ToastContainer e toast do react-toastify
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import SuccessModal from '../../components/SuccessModal';
 
 function Cadastro() {
     const router = useRouter();
@@ -33,6 +37,9 @@ function Cadastro() {
     const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
     const [isLoadingScheduledTimes, setIsLoadingScheduledTimes] = useState(true);
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const modalRef = useRef(null);
+    const [successMessage, setSuccessMessage] = useState('');
 
     const servicoPrecosMap = {
         corte_cabelo: 'R$ 35,00',
@@ -109,7 +116,7 @@ function Cadastro() {
             endOfDay.setDate(endOfDay.getDate() + 1);
 
             const q = query(
-                appointmentsRef, 
+                appointmentsRef,
                 where("dataAgendamento", ">=", startOfDay),
                 where("dataAgendamento", "<", endOfDay)
             );
@@ -152,12 +159,12 @@ function Cadastro() {
         try {
             const appointmentsRef = collection(db, 'agendamentos');
             const querySnapshot = await getDocs(appointmentsRef);
-            
+
             const times = querySnapshot.docs.map(doc => {
                 const data = doc.data();
                 return data.dataAgendamento.toDate().toISOString();
             });
-            
+
             setScheduledTimes(times);
         } catch (error) {
             console.error('Error fetching scheduled times:', error);
@@ -182,7 +189,7 @@ function Cadastro() {
             const timeZone = 'America/Sao_Paulo';
             const dataAgendamento = moment.tz(`${year}-${month}-${day} ${hour}:${minute}`, timeZone).toDate();
 
-            const isTimeSlotTaken = scheduledTimes.some(time => 
+            const isTimeSlotTaken = scheduledTimes.some(time =>
                 isEqual(parseISO(time), dataAgendamento)
             );
 
@@ -202,16 +209,24 @@ function Cadastro() {
                 preco,
             });
 
-            alert('Agendamento cadastrado com sucesso!');
-            setData('');
-            setHorario('');
-            setServico('');
-            setPreco('');
-            setError('');
-            router.push('/user/agendamentos');
+            setSuccessMessage('Agendamento realizado com sucesso!');
+            setIsSuccessModalOpen(true);
+            setTimeout(() => {
+                setIsSuccessModalOpen(false);
+                router.push('/user/agendamentos');
+            }, 2000);
+
         } catch (error) {
             console.error('Erro ao cadastrar Agendamento:', error);
             setError('Erro ao cadastrar Agendamento. Tente novamente.');
+            toast.error('Erro ao cadastrar Agendamento. Tente novamente.', {
+                position: "top-center",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+            });
         } finally {
             setIsLoading(false);
         }
@@ -223,6 +238,9 @@ function Cadastro() {
 
     return (
         <div className="bg-gradient-to-br from-gray-900 to-blue-900 text-white min-h-screen flex flex-col justify-center items-center px-4 py-12">
+            {/* Adicione o ToastContainer ao seu componente */}
+            <ToastContainer />
+
             <motion.div
                 className="w-full max-w-md bg-gray-800 rounded-lg shadow-xl p-8"
                 initial={{ opacity: 0, y: 20 }}
@@ -315,6 +333,13 @@ function Cadastro() {
                 <FaArrowLeft className="mr-2" />
                 Voltar para a página inicial
             </Link>
+
+            <SuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                message={successMessage}
+                autoCloseTime={9000}
+            />
 
             {(isLoadingScheduledTimes || isLoadingHorarios) && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
