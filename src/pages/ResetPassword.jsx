@@ -33,9 +33,7 @@ const ResetPassword = () => {
       await confirmPasswordReset(auth, oobCode, newPassword);
       setSuccess('Senha redefinida com sucesso!');
       setShowModal(true);
-      // Determine user role (this is a placeholder, you'll need to implement the actual logic)
-      const role = await getUserRole();
-      setUserRole(role);
+      // Remove the getUserRole logic since we're not using it anymore
     } catch (error) {
       setError('Erro ao redefinir a senha. Tente novamente.');
     }
@@ -43,11 +41,7 @@ const ResetPassword = () => {
 
   const handleCloseModal = () => {
     setShowModal(false);
-    if (userRole === 'admin') {
-      router.push('/admin');
-    } else {
-      router.push('/');
-    }
+    router.push('/login');
   };
 
   return (
