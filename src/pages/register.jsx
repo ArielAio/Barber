@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { FaGoogle, FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import translateFirebaseError from '../components/translateFirebaseError';
+import { GoogleAuthProvider } from 'firebase/auth'; // Added import for GoogleAuthProvider
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -16,6 +17,7 @@ const Register = () => {
   const router = useRouter();
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const provider = new GoogleAuthProvider(); // Added provider for Google login
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -24,11 +26,9 @@ const Register = () => {
       return;
     }
     try {
-      // Criar usuário com e-mail e senha
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Criar documento do usuário no Firestore
       await setDoc(doc(db, 'users', user.uid), {
         username: name,
         email: user.email,
