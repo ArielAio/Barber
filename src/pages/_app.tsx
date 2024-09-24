@@ -42,7 +42,7 @@ export default function App({ Component, pageProps }: AppProps) {
   }, []);
 
   // Define as rotas onde o Header não deve ser exibido
-  const noHeaderRoutes = ['/login', '/register'];
+  const noHeaderRoutes = ['/login', '/register', '/ResetPassword'];
 
   if (loading) {
     return <LoadingSpinner />;
