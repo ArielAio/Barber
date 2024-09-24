@@ -57,9 +57,14 @@ const Register = () => {
           username: user.displayName || '',
           email: user.email,
           role: 'user',
+          emailVerified: user.emailVerified,
         },
         { merge: true }
       );
+      if (!user.emailVerified) {
+        setError('Por favor, verifique seu e-mail antes de fazer login.');
+        return;
+      }
       await redirectUser(user.uid);
     } catch (err) {
       setError(translateFirebaseError(err.code));

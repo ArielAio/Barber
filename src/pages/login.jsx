@@ -23,6 +23,12 @@ const Login = () => {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
+            
+            if (!user.emailVerified) {
+                setError('Por favor, verifique seu e-mail antes de fazer login.');
+                return;
+            }
+            
             await redirectUser(user.uid);
         } catch (err) {
             setError(translateFirebaseError(err.code));
@@ -40,10 +46,19 @@ const Login = () => {
 
             if (!docSnap.exists()) {
                 await setDoc(docRef, {
-                    username: user.displayName || user.email.split('@')[0], // Usa o nome do Google ou o email sem domínio
+                    username: user.displayName || user.email.split('@')[0],
                     email: user.email,
                     role: 'user',
+                    emailVerified: user.emailVerified,
                 });
+            } else {
+                // Update the emailVerified status
+                await setDoc(docRef, { emailVerified: user.emailVerified }, { merge: true });
+            }
+
+            if (!user.emailVerified) {
+                setError('Por favor, verifique seu e-mail antes de fazer login.');
+                return;
             }
 
             await redirectUser(user.uid);
@@ -58,6 +73,10 @@ const Login = () => {
 
         if (docSnap.exists()) {
             const userData = docSnap.data();
+            if (!userData.emailVerified) {
+                setError('Por favor, verifique seu e-mail antes de fazer login.');
+                return;
+            }
             if (userData.role === 'admin') {
                 router.push('/admin');
             } else {
