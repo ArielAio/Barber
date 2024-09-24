@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getAuth, confirmPasswordReset, verifyPasswordResetCode, applyActionCode } from 'firebase/auth';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { getAuth, isSignInWithEmailLink, signInWithEmailLink, createUserWithEmailAndPassword, updateProfile, confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/router';
 import SuccessModal from '../components/SuccessModal';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import app from '../lib/firebase';
 
@@ -15,28 +14,50 @@ const AuthAction = () => {
   const [showModal, setShowModal] = useState(false);
   const [actionType, setActionType] = useState('');
   const router = useRouter();
-  const { mode, oobCode } = router.query;
+  const { mode, oobCode, name, password } = router.query;
   const auth = getAuth(app);
   const db = getFirestore(app);
 
   useEffect(() => {
-    if (oobCode && mode) {
-      auth.useDeviceLanguage();
-      if (mode === 'resetPassword') {
-        verifyPasswordResetCode(auth, oobCode)
-          .then(() => {
-            setIsCodeValid(true);
-            setActionType('resetPassword');
-          })
-          .catch(() => {
-            setError('Código de redefinição de senha inválido ou expirado.');
-          });
-      } else if (mode === 'verifyEmail') {
+    const handleAction = async () => {
+      if (isSignInWithEmailLink(auth, window.location.href)) {
         setActionType('verifyEmail');
-        handleVerifyEmail();
+        await verifyEmailAndCreateAccount();
+      } else if (mode === 'resetPassword' && oobCode) {
+        setActionType('resetPassword');
+        await verifyPasswordResetCode(auth, oobCode)
+          .then(() => setIsCodeValid(true))
+          .catch(() => setError('Código de redefinição de senha inválido ou expirado.'));
       }
+    };
+
+    handleAction();
+  }, [auth, mode, oobCode]);
+
+  const verifyEmailAndCreateAccount = async () => {
+    let email = window.localStorage.getItem('emailForSignIn');
+    if (!email) {
+      email = window.prompt('Por favor, forneça seu email para confirmação');
     }
-  }, [oobCode, mode, auth]);
+    try {
+      await signInWithEmailLink(auth, email, window.location.href);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      await updateProfile(user, { displayName: name });
+      await setDoc(doc(db, 'users', user.uid), {
+        username: name,
+        email: user.email,
+        role: 'user',
+        emailVerified: true,
+      });
+      window.localStorage.removeItem('emailForSignIn');
+      setSuccess('Conta criada com sucesso!');
+      setShowModal(true);
+    } catch (error) {
+      console.error('Erro durante a verificação de email e criação de conta:', error);
+      setError('Ocorreu um erro ao verificar seu e-mail e criar sua conta.');
+    }
+  };
 
   const handleResetPassword = async () => {
     try {
@@ -45,23 +66,6 @@ const AuthAction = () => {
       setShowModal(true);
     } catch (error) {
       setError('Erro ao redefinir a senha. Tente novamente.');
-    }
-  };
-
-  const handleVerifyEmail = async () => {
-    try {
-      await applyActionCode(auth, oobCode);
-      const user = auth.currentUser;
-      if (user) {
-        await updateDoc(doc(db, 'users', user.uid), {
-          emailVerified: true,
-        });
-      }
-      setSuccess('E-mail verificado com sucesso!');
-      setShowModal(true);
-    } catch (error) {
-      console.error('Error verifying email:', error);
-      setError('Ocorreu um erro ao verificar seu e-mail.');
     }
   };
 
@@ -103,7 +107,7 @@ const AuthAction = () => {
           {success ? (
             <p className="text-green-400 mb-4 text-center">{success}</p>
           ) : (
-            <p className="text-blue-300 text-center">Verificando seu e-mail...</p>
+            <p className="text-blue-300 text-center">Verificando seu e-mail e criando sua conta...</p>
           )}
         </>
       );

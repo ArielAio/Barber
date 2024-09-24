@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { FaUser, FaEnvelope, FaLock, FaTrash } from 'react-icons/fa';
 import Footer from '../components/Footer';
 import SuccessModal from '../components/SuccessModal'; // Import SuccessModal
+import ConfirmationModal from '../components/ConfirmationModal'; // Add this import
 
 const Conta = () => {
   const [userData, setUserData] = useState(null);
@@ -17,6 +18,7 @@ const Conta = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false); // State for SuccessModal
   const [successMessage, setSuccessMessage] = useState(''); // State for success message
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false); // Add this state
   const auth = getAuth();
   const router = useRouter();
 
@@ -90,26 +92,27 @@ const Conta = () => {
   };
 
   const handleDeleteAccount = async () => {
+    setIsConfirmationModalOpen(true);
+  };
+
+  const confirmDeleteAccount = async () => {
     const user = auth.currentUser;
     if (user) {
       const uid = user.uid;
-      const confirmDelete = window.confirm('Tem certeza que deseja excluir sua conta? Esse processo é irreversível.');
-
-      if (confirmDelete) {
-        try {
-          await deleteDoc(doc(db, 'users', uid));
-          await deleteUser(user);
-          setSuccessMessage('Sua conta foi excluída com sucesso.');
-          setIsSuccessModalOpen(true);
-          router.push('/login');
-        } catch (error) {
-          console.error('Erro ao excluir a conta:', error);
-          setError('Ocorreu um erro ao excluir sua conta. Tente novamente.');
-        }
+      try {
+        await deleteDoc(doc(db, 'users', uid));
+        await deleteUser(user);
+        setSuccessMessage('Sua conta foi excluída com sucesso.');
+        setIsSuccessModalOpen(true);
+        router.push('/login');
+      } catch (error) {
+        console.error('Erro ao excluir a conta:', error);
+        setError('Ocorreu um erro ao excluir sua conta. Tente novamente.');
       }
     } else {
       setError('Nenhum usuário logado.');
     }
+    setIsConfirmationModalOpen(false);
   };
 
   if (loading) {
@@ -219,6 +222,14 @@ const Conta = () => {
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}
         message={successMessage}
+      />
+      <ConfirmationModal
+        isOpen={isConfirmationModalOpen}
+        onClose={() => setIsConfirmationModalOpen(false)}
+        onConfirm={confirmDeleteAccount}
+        title="Excluir Conta"
+        message="Tem certeza que deseja excluir sua conta? Esse processo é irreversível."
+        confirmText="Excluir"
       />
     </div>
   );

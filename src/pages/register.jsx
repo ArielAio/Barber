@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { getAuth, createUserWithEmailAndPassword, sendSignInLinkToEmail } from 'firebase/auth';
 import { useRouter } from 'next/router';
-import { getAuth, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendEmailVerification } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
-import translateFirebaseError from '../components/translateFirebaseError';
+import { motion } from 'framer-motion';
 import app from '../lib/firebase';
 import Link from 'next/link';
 import { FaGoogle, FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
-import { motion } from 'framer-motion';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import translateFirebaseError from '../components/translateFirebaseError';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -17,7 +17,6 @@ const Register = () => {
   const router = useRouter();
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const provider = new GoogleAuthProvider();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -26,21 +25,18 @@ const Register = () => {
       return;
     }
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // Instead of creating the user, we'll just send a verification email
+      const actionCodeSettings = {
+        url: `${window.location.origin}/auth-action?name=${encodeURIComponent(name)}&password=${encodeURIComponent(password)}`,
+        handleCodeInApp: true
+      };
+
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
       
-      // Send email verification
-      await sendEmailVerification(user);
+      // Save the email locally to remember the user when they return
+      window.localStorage.setItem('emailForSignIn', email);
+      
       setVerificationSent(true);
-
-      await setDoc(doc(db, 'users', user.uid), {
-        username: name,
-        email: user.email,
-        role: 'user',
-        emailVerified: false,
-      });
-
-      // Don't redirect, wait for email verification
       setError('');
     } catch (err) {
       setError(translateFirebaseError(err.code));
