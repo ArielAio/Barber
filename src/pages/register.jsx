@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { FaGoogle, FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import translateFirebaseError from '../components/translateFirebaseError';
-import { GoogleAuthProvider } from 'firebase/auth'; // Added import for GoogleAuthProvider
+import { GoogleAuthProvider } from 'firebase/auth';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -17,7 +17,7 @@ const Register = () => {
   const router = useRouter();
   const auth = getAuth(app);
   const db = getFirestore(app);
-  const provider = new GoogleAuthProvider(); // Added provider for Google login
+  const provider = new GoogleAuthProvider();
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -107,10 +107,9 @@ const Register = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
           >
             <div className="space-y-4">
+              {/* Name input */}
               <div>
-                <label htmlFor="name" className="sr-only">
-                  Nome
-                </label>
+                <label htmlFor="name" className="sr-only">Nome</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUser className="h-5 w-5 text-gray-400" />
@@ -126,62 +125,63 @@ const Register = () => {
                     onChange={(e) => setName(e.target.value)}
                   />
                 </div>
-                <div>
-                  <label htmlFor="email-address" className="sr-only">
-                    Endereço de e-mail
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FaEnvelope className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="email-address"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                      placeholder="Endereço de e-mail"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="password" className="sr-only">
-                    Senha
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FaLock className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="password"
-                      name="password"
-                      type="password"
-                      autoComplete="new-password"
-                      required
-                      className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                      placeholder="Senha"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                </div>
               </div>
-
+              
+              {/* Email input */}
               <div>
-                <motion.button
-                  type="submit"
-                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  variants={buttonVariants}
-                  whileHover="hover"
-                  whileTap="tap"
-                >
-                  Registrar
-                </motion.button>
+                <label htmlFor="email-address" className="sr-only">Endereço de e-mail</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaEnvelope className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="email-address"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Endereço de e-mail"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
               </div>
-            </motion.form>
+              
+              {/* Password input */}
+              <div>
+                <label htmlFor="password" className="sr-only">Senha</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FaLock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    className="appearance-none rounded-md relative block w-full px-3 py-2 pl-10 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Senha"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <motion.button
+                type="submit"
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                variants={buttonVariants}
+                whileHover="hover"
+                whileTap="tap"
+              >
+                Registrar
+              </motion.button>
+            </div>
+          </motion.form>
           
           <motion.div 
             className="mt-6"
