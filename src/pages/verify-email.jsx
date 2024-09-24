@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getAuth, applyActionCode } from 'firebase/auth';
-import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, doc, updateDoc, getDoc } from 'firebase/firestore';
 import app from '../lib/firebase';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -19,15 +19,36 @@ const VerifyEmail = () => {
         try {
           await applyActionCode(auth, oobCode);
           
-          // Update user's emailVerified status in Firestore
+          // Get the current user
           const user = auth.currentUser;
-          if (user) {
-            await updateDoc(doc(db, 'users', user.uid), {
-              emailVerified: true,
-            });
-          }
           
-          setVerificationStatus('success');
+          if (user) {
+            // Reload the user to get the updated email verification status
+            await user.reload();
+            
+            // Double-check if the email is verified
+            if (user.emailVerified) {
+              // Update user's emailVerified status in Firestore
+              const userDocRef = doc(db, 'users', user.uid);
+              const userDoc = await getDoc(userDocRef);
+              
+              if (userDoc.exists()) {
+                await updateDoc(userDocRef, {
+                  emailVerified: true,
+                });
+                setVerificationStatus('success');
+              } else {
+                console.error('User document not found in Firestore');
+                setVerificationStatus('error');
+              }
+            } else {
+              console.error('Email not verified after applying action code');
+              setVerificationStatus('error');
+            }
+          } else {
+            console.error('No user found after applying action code');
+            setVerificationStatus('error');
+          }
         } catch (error) {
           console.error('Error verifying email:', error);
           setVerificationStatus('error');
