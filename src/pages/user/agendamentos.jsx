@@ -4,7 +4,7 @@ import { getFirestore, collection, query, where, getDocs, updateDoc, deleteDoc, 
 import app from '../../lib/firebase';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FaCalendarAlt, FaEdit, FaTrashAlt, FaClock, FaTimes, FaCalendarTimes } from 'react-icons/fa';
 import { format, addHours, isAfter, subDays, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -283,9 +283,9 @@ function Agendamentos() {
     }
 
     return (
-        <div className="bg-gradient-to-br from-gray-900 to-blue-900 text-white min-h-screen flex flex-col items-center px-4 py-8">
+        <div className="bg-gradient-to-br from-gray-900 to-blue-900 text-white min-h-screen flex flex-col items-center px-4 py-12">
             <motion.h1
-                className="text-3xl md:text-4xl font-bold mb-8 text-center"
+                className="text-4xl md:text-5xl font-bold mb-12 text-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
@@ -295,7 +295,7 @@ function Agendamentos() {
 
             <motion.button
                 onClick={() => router.push('/user/cadastro')}
-                className="mb-8 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-300 ease-in-out"
+                className="mb-12 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-8 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 transition duration-300 ease-in-out transform hover:-translate-y-1"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
             >
@@ -323,20 +323,48 @@ function Agendamentos() {
 
             {recentAgendamento && (
                 <motion.div
-                    className="w-full max-w-lg bg-opacity-90 bg-blue-800 p-6 rounded-lg shadow-lg mb-8"
+                    className="w-full max-w-lg bg-gradient-to-br from-blue-800 to-indigo-900 p-8 rounded-3xl shadow-2xl mb-12 overflow-hidden relative"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <h2 className="text-2xl font-bold mb-4 flex items-center">
-                        <FaCalendarAlt className="mr-2 text-blue-400" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 opacity-20 rounded-full transform translate-x-16 -translate-y-16"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500 opacity-20 rounded-full transform -translate-x-12 translate-y-12"></div>
+                    
+                    <h2 className="text-3xl font-bold mb-6 flex items-center text-blue-200">
+                        <FaCalendarAlt className="mr-3 text-blue-400" />
                         Próximo Agendamento
                     </h2>
-                    <div className="bg-blue-700 bg-opacity-50 p-4 rounded-lg">
-                        <p className="mb-2 text-lg"><strong>Nome:</strong> {recentAgendamento.nome}</p>
-                        <p className="mb-2 text-lg"><strong>Data e Hora:</strong> {format(recentAgendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
-                        <p className="mb-2 text-lg"><strong>Serviço:</strong> {getServiceName(recentAgendamento.servico)}</p>
-                        <p className="mb-2 text-lg"><strong>Preço:</strong> {recentAgendamento.preco}</p>
+                    
+                    <div className="bg-blue-700 bg-opacity-30 p-6 rounded-xl backdrop-filter backdrop-blur-sm">
+                        <div className="space-y-4">
+                            <div className="flex items-center">
+                                <span className="text-blue-300 font-semibold w-24">Nome:</span>
+                                <span className="text-white">{recentAgendamento.nome}</span>
+                            </div>
+                            <div className="flex items-center">
+                                <span className="text-blue-300 font-semibold w-24">Data:</span>
+                                <span className="text-white">{format(recentAgendamento.dataAgendamento.toDate(), "dd 'de' MMMM", { locale: ptBR })}</span>
+                            </div>
+                            <div className="flex items-center">
+                                <span className="text-blue-300 font-semibold w-24">Horário:</span>
+                                <span className="text-white">{format(recentAgendamento.dataAgendamento.toDate(), "HH:mm 'h'", { locale: ptBR })}</span>
+                            </div>
+                            <div className="flex items-center">
+                                <span className="text-blue-300 font-semibold w-24">Serviço:</span>
+                                <span className="text-white">{getServiceName(recentAgendamento.servico)}</span>
+                            </div>
+                            <div className="flex items-center">
+                                <span className="text-blue-300 font-semibold w-24">Preço:</span>
+                                <span className="text-white font-bold text-lg">{recentAgendamento.preco}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-6 text-center">
+                        <p className="text-blue-200 text-sm">
+                            Seu próximo agendamento está confirmado. Aguardamos você!
+                        </p>
                     </div>
                 </motion.div>
             )}
@@ -418,50 +446,53 @@ function Agendamentos() {
                 </motion.div>
             )}
 
-            {agendamentos.length > 0 && (
-                <motion.div
-                    className="w-full max-w-lg"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                    <h2 className="text-2xl font-bold mb-4">Todos os Agendamentos</h2>
-                    {agendamentos.map((agendamento) => (
-                        <motion.div
-                            key={agendamento.id}
-                            className="bg-opacity-90 bg-gray-800 p-4 rounded-lg shadow-lg mb-4"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                                <div className="mb-2 md:mb-0">
-                                    <p className="font-bold text-lg">{agendamento.nome}</p>
-                                    <p className="text-sm text-gray-300">{format(agendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
+            <AnimatePresence>
+                {agendamentos.length > 0 && (
+                    <motion.div
+                        className="w-full max-w-lg"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                    >
+                        <h2 className="text-3xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">Todos os Agendamentos</h2>
+                        {agendamentos.map((agendamento) => (
+                            <motion.div
+                                key={agendamento.id}
+                                className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl shadow-xl mb-6 border border-gray-700"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                                    <div className="mb-2 md:mb-0">
+                                        <p className="font-bold text-lg">{agendamento.nome}</p>
+                                        <p className="text-sm text-gray-300">{format(agendamento.dataAgendamento.toDate(), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</p>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <p className="text-sm">{getServiceName(agendamento.servico)}</p>
+                                        <p className="font-bold text-yellow-400">{agendamento.preco}</p>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col items-end">
-                                    <p className="text-sm">{getServiceName(agendamento.servico)}</p>
-                                    <p className="font-bold text-yellow-400">{agendamento.preco}</p>
+                                <div className="mt-6 flex justify-end space-x-3">
+                                    <button
+                                        onClick={() => handleEdit(agendamento)}
+                                        className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-bold py-2 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-50 transition duration-300 ease-in-out"
+                                    >
+                                        <FaEdit className="mr-2 inline-block" /> Editar
+                                    </button>
+                                    <button
+                                        onClick={() => handleConfirmDelete(agendamento.id)}
+                                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-2 px-6 rounded-full focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-50 transition duration-300 ease-in-out"
+                                    >
+                                        <FaTrashAlt className="mr-2 inline-block" /> Cancelar
+                                    </button>
                                 </div>
-                            </div>
-                            <div className="mt-4 flex justify-end space-x-2">
-                                <button
-                                    onClick={() => handleEdit(agendamento)}
-                                    className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                                >
-                                    <FaEdit className="mr-2 inline-block" /> Editar
-                                </button>
-                                <button
-                                    onClick={() => handleConfirmDelete(agendamento.id)}
-                                    className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-red-400"
-                                >
-                                    <FaTrashAlt className="mr-2 inline-block" /> Cancelar
-                                </button>
-                            </div>
-                        </motion.div>
-                    ))}
-                </motion.div>
-            )}
+                            </motion.div>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <div className="w-full max-w-lg mt-8">
                 <h2 className="text-2xl font-bold mb-4">Calendário de Agendamentos</h2>
