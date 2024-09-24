@@ -9,6 +9,8 @@ import { MdCheck, MdCancel, MdEdit, MdDelete, MdSearch, MdAdd, MdFilterList, MdE
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../../components/Footer';
+import ConfirmationModal from '../../components/ConfirmationModal';
+import SuccessModal from '../../components/SuccessModal';
 
 function Agendamentos() {
     const [clientesPendentes, setClientesPendentes] = useState([]);
@@ -22,6 +24,10 @@ function Agendamentos() {
     const [expandedClientes, setExpandedClientes] = useState({});
     const [showPastAppointments, setShowPastAppointments] = useState(false);
     const [showFutureAppointments, setShowFutureAppointments] = useState(true);
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [clienteToDelete, setClienteToDelete] = useState(null);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
     const router = useRouter();
     const auth = getAuth(app);
     const db = getFirestore(app);
@@ -88,9 +94,18 @@ function Agendamentos() {
     };
 
     const handleDelete = async (cliente) => {
-        if (confirm(`Você tem certeza que deseja excluir o cliente ${cliente.nome}?`)) {
-            await deleteDoc(doc(db, 'agendamentos', cliente.id));
+        setClienteToDelete(cliente);
+        setIsConfirmationModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (clienteToDelete) {
+            await deleteDoc(doc(db, 'agendamentos', clienteToDelete.id));
             fetchClientesPendentes();
+            setIsConfirmationModalOpen(false);
+            setClienteToDelete(null);
+            setSuccessMessage('Cliente excluído com sucesso!');
+            setIsSuccessModalOpen(true);
         }
     };
 
@@ -355,6 +370,19 @@ function Agendamentos() {
                 </Link>
             </div>
             <Footer />
+            <ConfirmationModal
+                isOpen={isConfirmationModalOpen}
+                onClose={() => setIsConfirmationModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Confirmar Exclusão"
+                message={`Você tem certeza que deseja excluir o cliente ${clienteToDelete?.nome}?`}
+                confirmText="Excluir"
+            />
+            <SuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+                message={successMessage}
+            />
         </div>
     );
 }

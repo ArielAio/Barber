@@ -2,16 +2,17 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { FaCut, FaUserTie, FaUserAlt } from 'react-icons/fa'; // Import icons
 import UserHeader from '../components/UserHeader';
 import Footer from '../components/Footer';
 
-function Servicos  () {
+function Servicos() {
   const router = useRouter();
 
   const services = [
-    { id: 'corte_cabelo', name: 'Corte de Cabelo', price: 'R$ 35,00' },
-    { id: 'corte_barba', name: 'Corte de Barba', price: 'R$ 25,00' },
-    { id: 'corte_cabelo_barba', name: 'Corte de Cabelo e Barba', price: 'R$ 50,00' },
+    { id: 'corte_cabelo', name: 'Corte de Cabelo', price: 'R$ 35,00', icon: <FaCut size={50} /> }, // Ícones maiores
+    { id: 'corte_barba', name: 'Corte de Barba', price: 'R$ 25,00', icon: <FaUserTie size={50} /> },
+    { id: 'corte_cabelo_barba', name: 'Corte de Cabelo e Barba', price: 'R$ 50,00', icon: <FaUserAlt size={50} /> },
   ];
 
   const containerVariants = {
@@ -34,7 +35,7 @@ function Servicos  () {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col">
       <UserHeader />
       <div className="flex flex-col flex-grow w-full text-white pt-16">
         <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-6">
@@ -42,7 +43,7 @@ function Servicos  () {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-3xl sm:text-4xl font-bold mb-8 text-blue-300"
+            className="text-4xl sm:text-5xl font-bold mb-8 text-blue-400"
           >
             Nossos Serviços
           </motion.h1>
@@ -51,13 +52,14 @@ function Servicos  () {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full max-w-4xl"
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 w-full max-w-5xl"
           >
             {services.map((service) => (
               <motion.div key={service.id} variants={itemVariants}>
-                <Link href={`/user/cadastro?servico=${service.id}`} className="flex flex-col items-center justify-center p-6 bg-blue-800 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-colors w-full h-full group">
-                  <h2 className="text-xl font-semibold mb-2 text-center">{service.name}</h2>
-                  <p className="text-2xl font-bold text-blue-300">{service.price}</p>
+                <Link href={`/user/cadastro?servico=${service.id}`} className="flex flex-col items-center justify-center p-8 bg-blue-900 text-white rounded-xl shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105 w-full h-full group">
+                  <div className="mb-6 text-blue-300 group-hover:text-blue-200 transition-colors">{service.icon}</div>
+                  <h2 className="text-2xl font-bold mb-2 text-center">{service.name}</h2>
+                  <p className="text-3xl font-bold text-blue-300">{service.price}</p>
                 </Link>
               </motion.div>
             ))}
@@ -69,7 +71,7 @@ function Servicos  () {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="mt-8"
           >
-            <Link href="/" className="text-blue-300 hover:text-blue-400 transition-colors">
+            <Link href="/" className="text-blue-400 hover:text-blue-500 transition-colors">
               Voltar para a página inicial
             </Link>
           </motion.div>
