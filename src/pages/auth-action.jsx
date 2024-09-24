@@ -40,19 +40,30 @@ const AuthAction = () => {
       email = window.prompt('Por favor, forneça seu email para confirmação');
     }
     try {
+      // First, complete the sign-in process
       await signInWithEmailLink(auth, email, window.location.href);
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      await updateProfile(user, { displayName: name });
-      await setDoc(doc(db, 'users', user.uid), {
-        username: name,
-        email: user.email,
-        role: 'user',
-        emailVerified: true,
-      });
-      window.localStorage.removeItem('emailForSignIn');
-      setSuccess('Conta criada com sucesso!');
-      setShowModal(true);
+      
+      // Get the current user
+      const user = auth.currentUser;
+      
+      if (user) {
+        // Update the user's profile
+        await updateProfile(user, { displayName: name });
+        
+        // Set the user document in Firestore
+        await setDoc(doc(db, 'users', user.uid), {
+          username: name,
+          email: user.email,
+          role: 'user',
+          emailVerified: true,
+        });
+        
+        window.localStorage.removeItem('emailForSignIn');
+        setSuccess('Conta criada com sucesso!');
+        setShowModal(true);
+      } else {
+        throw new Error('User not found after sign-in');
+      }
     } catch (error) {
       console.error('Erro durante a verificação de email e criação de conta:', error);
       setError('Ocorreu um erro ao verificar seu e-mail e criar sua conta.');

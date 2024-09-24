@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getAuth, createUserWithEmailAndPassword, sendSignInLinkToEmail } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendSignInLinkToEmail, sendEmailVerification } from 'firebase/auth';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import app from '../lib/firebase';
@@ -25,18 +25,32 @@ const Register = () => {
       return;
     }
     try {
-      // Instead of creating the user, we'll just send a verification email
       const actionCodeSettings = {
-        url: `${window.location.origin}/auth-action?name=${encodeURIComponent(name)}&password=${encodeURIComponent(password)}`,
+        url: `${window.location.origin}/auth-action?name=${encodeURIComponent(name)}`,
         handleCodeInApp: true
       };
 
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      try {
+        // Tenta enviar o link de autenticação por e-mail
+        await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+        window.localStorage.setItem('emailForSignIn', email);
+        setVerificationSent(true);
+      } catch (linkError) {
+        // Se falhar, cria o usuário com e-mail e senha e envia um e-mail de verificação padrão
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCredential.user);
+        
+        // Cria o documento do usuário no Firestore
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          username: name,
+          email: email,
+          role: 'user',
+          emailVerified: false,
+        });
+
+        setVerificationSent(true);
+      }
       
-      // Save the email locally to remember the user when they return
-      window.localStorage.setItem('emailForSignIn', email);
-      
-      setVerificationSent(true);
       setError('');
     } catch (err) {
       setError(translateFirebaseError(err.code));
