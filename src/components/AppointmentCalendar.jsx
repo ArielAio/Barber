@@ -84,6 +84,14 @@ const CALENDAR_MESSAGES = {
   week: "Semana",
   day: "Dia",
   agenda: "Agenda",
+  date: "Data",
+  time: "Hora",
+  event: "Evento",
+  allDay: "Dia inteiro",
+  work_week: "Semana de trabalho",
+  yesterday: "Ontem",
+  tomorrow: "Amanhã",
+  noEventsInRange: "Não há eventos neste período.",
   showMore: total => `+${total} mais`
 };
 
@@ -146,7 +154,7 @@ const AppointmentCalendar = ({ events }) => {
                 view === name ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              {name.charAt(0).toUpperCase() + name.slice(1)}
+              {name === 'month' ? 'Mês' : name === 'week' ? 'Semana' : 'Dia'}
             </button>
           ))}
         </div>
@@ -197,8 +205,8 @@ const AppointmentCalendar = ({ events }) => {
             endAccessor="end"
             style={{ height: '100%' }}
             messages={CALENDAR_MESSAGES}
-            views={['month', 'week', 'day']}
             formats={CALENDAR_FORMATS}
+            views={['month', 'week', 'day']}
             components={{
               toolbar: CustomToolbar,
               event: CustomEvent,
