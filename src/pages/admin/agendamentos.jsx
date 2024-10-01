@@ -195,6 +195,56 @@ function Agendamentos() {
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
+    const renderPaginationButtons = () => {
+        const totalPages = Math.ceil(flattenedAppointments.length / appointmentsPerPage);
+        const pageNumbers = [];
+
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) {
+                pageNumbers.push(i);
+            }
+        } else {
+            if (currentPage <= 3) {
+                for (let i = 1; i <= 5; i++) {
+                    pageNumbers.push(i);
+                }
+                pageNumbers.push('...');
+                pageNumbers.push(totalPages);
+            } else if (currentPage >= totalPages - 2) {
+                pageNumbers.push(1);
+                pageNumbers.push('...');
+                for (let i = totalPages - 4; i <= totalPages; i++) {
+                    pageNumbers.push(i);
+                }
+            } else {
+                pageNumbers.push(1);
+                pageNumbers.push('...');
+                for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                    pageNumbers.push(i);
+                }
+                pageNumbers.push('...');
+                pageNumbers.push(totalPages);
+            }
+        }
+
+        return pageNumbers.map((number, index) => (
+            <button
+                key={index}
+                onClick={() => number !== '...' && paginate(number)}
+                className={`mx-1 px-3 py-1 rounded ${
+                    currentPage === number
+                        ? 'bg-blue-600'
+                        : number === '...'
+                        ? 'bg-gray-700 cursor-default'
+                        : 'bg-gray-700 hover:bg-gray-600'
+                } transition-colors duration-300`}
+                disabled={number === '...'}
+            >
+                {number}
+            </button>
+        ));
+    };
+
     if (role === null) {
         return <LoadingSpinner />;
     }
@@ -346,16 +396,7 @@ function Agendamentos() {
                 )}
 
                 <div className="mt-6 flex justify-center">
-                    {Array.from({ length: Math.ceil(flattenedAppointments.length / appointmentsPerPage) }, (_, i) => (
-                        <button
-                            key={i}
-                            onClick={() => paginate(i + 1)}
-                            className={`mx-1 px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
-                                } transition-colors duration-300`}
-                        >
-                            {i + 1}
-                        </button>
-                    ))}
+                    {renderPaginationButtons()}
                 </div>
 
                 <Link href="/admin/cadastro" className="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white font-bold p-4 rounded-full shadow-lg transition-colors duration-300">
