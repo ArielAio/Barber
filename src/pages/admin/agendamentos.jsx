@@ -15,7 +15,7 @@ import SuccessModal from '../../components/SuccessModal';
 function Agendamentos() {
     const [clientesPendentes, setClientesPendentes] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
-    const [clientesPerPage] = useState(10);
+    const appointmentsPerPage = 5;
     const [statusFilter, setStatusFilter] = useState('Todos');
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
@@ -182,6 +182,19 @@ function Agendamentos() {
         }, {});
     };
 
+    const flattenedAppointments = Object.entries(groupByDateAndEmail(Object.values(clientesPendentes).flat()))
+        .flatMap(([date, clientesByEmail]) => 
+            Object.entries(clientesByEmail).map(([email, appointments]) => 
+                ({ date, email, appointments })
+            )
+        );
+
+    const indexOfLastAppointment = currentPage * appointmentsPerPage;
+    const indexOfFirstAppointment = indexOfLastAppointment - appointmentsPerPage;
+    const currentAppointments = flattenedAppointments.slice(indexOfFirstAppointment, indexOfLastAppointment);
+
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
     if (role === null) {
         return <LoadingSpinner />;
     }
@@ -272,80 +285,60 @@ function Agendamentos() {
 
                 {loading ? (
                     <LoadingSpinner />
-                ) : Object.keys(clientesPendentes).length === 0 ? (
+                ) : flattenedAppointments.length === 0 ? (
                     <p className="text-center text-gray-400">Nenhum agendamento encontrado.</p>
                 ) : (
                     <div className="space-y-6">
-                        {Object.entries(groupByDateAndEmail(Object.values(clientesPendentes).flat())).map(([date, clientesByEmail]) => (
-                            <div key={date} className="bg-gray-800 p-4 rounded-lg shadow-lg">
+                        {currentAppointments.map(({ date, email, appointments }) => (
+                            <div key={`${date}-${email}`} className="bg-gray-800 p-4 rounded-lg shadow-lg">
                                 <h2 className="text-lg font-semibold mb-2 text-gray-300">{date}</h2>
-                                <div className="space-y-4">
-                                    {Object.entries(clientesByEmail).map(([email, clientes]) => {
-                                        const key = `${email}-${date}`;
-                                        const displayEmail = email && email !== 'undefined' && email !== 'null' && email.trim() !== '' 
-                                            ? email 
-                                            : "Sem email vinculado";
-                                        return (
-                                            <div key={key} className="bg-gray-700 p-4 rounded-lg">
+                                <div className="bg-gray-700 p-4 rounded-lg">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                                        <div className="flex flex-col items-start">
+                                            <h3 className="text-xl font-semibold">{appointments[0].nome}</h3>
+                                            <p className="text-gray-400">{email}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 space-y-4">
+                                        {appointments.map((appointment) => (
+                                            <div key={appointment.id} className="bg-gray-600 p-4 rounded-lg">
                                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
                                                     <div className="flex flex-col items-start">
-                                                        <h3 className="text-xl font-semibold">{clientes[0].nome}</h3>
-                                                        <p className="text-gray-400">{displayEmail}</p>
+                                                        <p className="text-gray-400">{appointment.horaAgendamento}</p>
+                                                        <p className="text-gray-400">Serviço: {getServiceName(appointment.servico)}</p>
+                                                        <p className="text-gray-400">Preço: {formatPreco(appointment.preco)}</p>
+                                                        <p className="text-gray-400">Status: {appointment.statusPagamento}</p>
                                                     </div>
-                                                    {clientes.length > 1 && (
+                                                    <div className="flex space-x-2 items-center mt-2 md:mt-0">
+                                                        {appointment.isConcluido && (
+                                                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
+                                                                Concluído
+                                                            </span>
+                                                        )}
                                                         <button
-                                                            onClick={() => toggleExpand(email, date)}
-                                                            className="p-2 bg-gray-600 rounded-full hover:bg-gray-500 transition-colors duration-300"
+                                                            onClick={() => handleStatusChange(appointment, appointment.statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
+                                                            className={`p-2 rounded-full ${appointment.statusPagamento === 'Pago' ? 'bg-green-500' : 'bg-yellow-500'
+                                                                } hover:opacity-80 transition-opacity duration-300`}
                                                         >
-                                                            {expandedClientes[key] ? <MdExpandLess size={20} /> : <MdExpandMore size={20} />}
+                                                            {appointment.statusPagamento === 'Pago' ? <MdCheck size={20} /> : <MdCancel size={20} />}
                                                         </button>
-                                                    )}
-                                                </div>
-                                                {expandedClientes[key] || clientes.length === 1 ? (
-                                                    <div className="mt-4 space-y-4">
-                                                        {clientes.map((cliente) => (
-                                                            <div key={cliente.id} className="bg-gray-600 p-4 rounded-lg">
-                                                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                                                                    <div className="flex flex-col items-start">
-                                                                        <p className="text-gray-400">{cliente.horaAgendamento}</p>
-                                                                        <p className="text-gray-400">Serviço: {getServiceName(cliente.servico)}</p>
-                                                                        <p className="text-gray-400">Preço: {formatPreco(cliente.preco)}</p>
-                                                                        <p className="text-gray-400">Status: {cliente.statusPagamento}</p>
-                                                                    </div>
-                                                                    <div className="flex space-x-2 items-center mt-2 md:mt-0">
-                                                                        {cliente.isConcluido && (
-                                                                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
-                                                                                Concluído
-                                                                            </span>
-                                                                        )}
-                                                                        <button
-                                                                            onClick={() => handleStatusChange(cliente, cliente.statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
-                                                                            className={`p-2 rounded-full ${cliente.statusPagamento === 'Pago' ? 'bg-green-500' : 'bg-yellow-500'
-                                                                                } hover:opacity-80 transition-opacity duration-300`}
-                                                                        >
-                                                                            {cliente.statusPagamento === 'Pago' ? <MdCheck size={20} /> : <MdCancel size={20} />}
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleEdit(cliente)}
-                                                                            className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
-                                                                        >
-                                                                            <MdEdit size={20} />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleDelete(cliente)}
-                                                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
-                                                                        >
-                                                                            <MdDelete size={20} />
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))}
+                                                        <button
+                                                            onClick={() => handleEdit(appointment)}
+                                                            className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
+                                                        >
+                                                            <MdEdit size={20} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(appointment)}
+                                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
+                                                        >
+                                                            <MdDelete size={20} />
+                                                        </button>
                                                     </div>
-                                                ) : null}
+                                                </div>
                                             </div>
-                                        );
-                                    })}
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -353,10 +346,10 @@ function Agendamentos() {
                 )}
 
                 <div className="mt-6 flex justify-center">
-                    {Array.from({ length: Math.ceil(Object.keys(clientesPendentes).length / clientesPerPage) }, (_, i) => (
+                    {Array.from({ length: Math.ceil(flattenedAppointments.length / appointmentsPerPage) }, (_, i) => (
                         <button
                             key={i}
-                            onClick={() => setCurrentPage(i + 1)}
+                            onClick={() => paginate(i + 1)}
                             className={`mx-1 px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
                                 } transition-colors duration-300`}
                         >
