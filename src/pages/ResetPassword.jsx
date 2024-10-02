@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAuth, confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
-import { useRouter, useSearchParams } from 'next/router';
+import { useRouter } from 'next/router';
 import SuccessModal from '../components/SuccessModal';
 
 const ResetPassword = () => {
@@ -9,9 +9,9 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState('');
   const [isCodeValid, setIsCodeValid] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [userRole, setUserRole] = useState('');
   const router = useRouter();
-  const [searchParams] = useSearchParams();
-  const oobCode = searchParams.get('oobCode');
+  const { oobCode, apiKey } = router.query;
 
   useEffect(() => {
     const auth = getAuth();
@@ -23,9 +23,8 @@ const ResetPassword = () => {
         .catch((error) => {
           console.error('Error verifying reset code:', error);
           setError('Código de redefinição de senha inválido ou expirado.');
+          setIsCodeValid(false);
         });
-    } else {
-      setError('Código de redefinição de senha não encontrado na URL.');
     }
   }, [oobCode]);
 
@@ -74,7 +73,9 @@ const ResetPassword = () => {
             </button>
           </>
         ) : (
-          <p className="text-red-400 text-center">Verificando código de redefinição de senha...</p>
+          <p className="text-red-400 text-center">
+            {error || 'Verificando código de redefinição de senha...'}
+          </p>
         )}
       </div>
       <SuccessModal
