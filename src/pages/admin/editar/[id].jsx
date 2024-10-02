@@ -6,7 +6,7 @@ import app from '../../../lib/firebase';
 import moment from 'moment-timezone';
 import { motion } from 'framer-motion';
 import { FaArrowLeft, FaCalendarAlt, FaClock } from 'react-icons/fa';
-import { format, parseISO, isEqual } from 'date-fns';
+import { format, parseISO, isEqual, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import DateModal from '../../../components/DateModal';
@@ -32,6 +32,7 @@ function EditarCliente() {
     const [scheduledTimes, setScheduledTimes] = useState([]);
     const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [formattedDate, setFormattedDate] = useState('');
 
     const db = getFirestore(app);
 
@@ -52,6 +53,7 @@ function EditarCliente() {
                 setHoraAgendamento(moment(dataHora).format('HH:mm'));
                 setSelectedDate(dataHora);
                 setCurrentMonth(dataHora);
+                setFormattedDate(format(dataHora, 'dd/MM/yyyy', { locale: ptBR }));
             }
         } catch (error) {
             console.error("Erro ao buscar cliente:", error);
@@ -130,13 +132,13 @@ function EditarCliente() {
         }
     }, [selectedDate, generateHorarios]);
 
-    const handleDateSelect = (date) => {
-        setSelectedDate(date);
-        setDataAgendamento(format(date, 'yyyy-MM-dd'));
+    const handleDateSelect = useCallback((date) => {
+        setDataAgendamento(date);
+        setFormattedDate(format(date, 'dd/MM/yyyy', { locale: ptBR }));
         setShowDateModal(false);
-        setShowTimeModal(true);
         generateHorarios(date);
-    };
+        setShowTimeModal(true);  // Abre o TimeModal imediatamente após selecionar a data
+    }, []);
 
     const handleTimeSelect = (time) => {
         setHoraAgendamento(time);
@@ -149,10 +151,10 @@ function EditarCliente() {
 
         try {
             const timeZone = 'America/Sao_Paulo';
-            const dataHora = moment.tz(`${dataAgendamento} ${horaAgendamento}`, timeZone).toDate();
+            const dateTime = parse(`${dataAgendamento} ${horaAgendamento}`, 'yyyy-MM-dd HH:mm', new Date());
 
             // Verifica se a data selecionada é no passado
-            if (dataHora < new Date()) {
+            if (dateTime < new Date()) {
                 setError('Não é possível agendar para uma data no passado.');
                 return;
             }
@@ -161,7 +163,7 @@ function EditarCliente() {
 
             const updatedData = {
                 nome,
-                dataAgendamento: dataHora
+                dataAgendamento: dateTime
             };
 
             if (email) {
@@ -242,7 +244,7 @@ function EditarCliente() {
                                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
                             >
                                 <FaCalendarAlt className="inline-block mr-2" />
-                                {dataAgendamento ? format(new Date(dataAgendamento), 'dd/MM/yyyy') : 'Selecionar Data'}
+                                {formattedDate || 'Selecionar Data'}
                             </button>
                             <button
                                 type="button"
@@ -267,20 +269,16 @@ function EditarCliente() {
                 </motion.div>
             </main>
 
-            <DateModal 
+            <DateModal
                 showModal={showDateModal}
                 setShowModal={setShowDateModal}
-                currentMonth={currentMonth}
-                setCurrentMonth={setCurrentMonth}
-                selectedDate={selectedDate}
                 handleDateSelect={handleDateSelect}
-                generateCalendarDays={generateCalendarDays}
             />
 
             <TimeModal
                 showModal={showTimeModal}
                 setShowModal={setShowTimeModal}
-                selectedDate={selectedDate}
+                selectedDate={dataAgendamento}
                 handleTimeSelect={handleTimeSelect}
                 horarios={horarios}
                 scheduledTimes={scheduledTimes}

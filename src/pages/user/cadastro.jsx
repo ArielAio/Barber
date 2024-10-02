@@ -18,6 +18,7 @@ import Footer from '../../components/Footer';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SuccessModal from '../../components/SuccessModal';
+import { utcToZonedTime } from 'date-fns-tz';
 
 function Cadastro() {
     const router = useRouter();
@@ -36,7 +37,8 @@ function Cadastro() {
     const [scheduledTimes, setScheduledTimes] = useState([]);
     const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
     const [isLoadingScheduledTimes, setIsLoadingScheduledTimes] = useState(true);
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(null);
+    const [formattedDate, setFormattedDate] = useState('');
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const modalRef = useRef(null);
     const [successMessage, setSuccessMessage] = useState('');
@@ -98,6 +100,8 @@ function Cadastro() {
 
     const handleDateSelect = (date) => {
         setSelectedDate(date);
+        const formattedDate = format(date, 'dd/MM/yyyy', { locale: ptBR });
+        setFormattedDate(formattedDate);
         setData(format(date, 'yyyy-MM-dd'));
         fetchHorarios(date);
     };
@@ -284,7 +288,7 @@ function Cadastro() {
                                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
                             >
                                 <FaCalendarAlt className="inline-block mr-2" />
-                                {data ? format(new Date(data), 'dd/MM/yyyy') : 'Selecionar Data'}
+                                {formattedDate || 'Selecionar Data'}
                             </button>
                             <button
                                 type="button"

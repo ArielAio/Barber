@@ -46,6 +46,7 @@ function Agendamentos() {
     const [confirmAction, setConfirmAction] = useState(null);
     const [selectedAgendamentoId, setSelectedAgendamentoId] = useState(null);
     const [updatedAgendamento, setUpdatedAgendamento] = useState(null);
+    const [formattedDate, setFormattedDate] = useState('');
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -118,78 +119,79 @@ function Agendamentos() {
     }, [currentMonth]);
 
     const generateHorarios = useCallback(async (date) => {
+        if (!date) return;
+
         setIsLoadingHorarios(true);
+        try {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
 
-        const start = 9;
-        const end = 18;
-        const interval = 30;
-        const generatedHorarios = [];
-
-        for (let hour = start; hour < end; hour++) {
-            for (let minute = 0; minute < 60; minute += interval) {
-                const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                generatedHorarios.push(time);
-            }
-        }
-
-        const agendamentosSnapshot = await getDocs(collection(db, 'agendamentos'));
-        const agendamentos = agendamentosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        const scheduledTimesArray = agendamentos.map(agendamento =>
-            agendamento.dataAgendamento.toDate().toISOString()
-        );
-        setScheduledTimes(scheduledTimesArray);
-
-        const availableHorarios = generatedHorarios.map(time => {
-            const [hour, minute] = time.split(':');
-            const dateTime = date ? new Date(date) : new Date();
-            dateTime.setHours(parseInt(hour), parseInt(minute));
-
-            const isOccupied = agendamentos.some(agendamento => {
-                if (agendamento.id === editingAgendamentoId) return false;
-                const agendamentoDate = agendamento.dataAgendamento.toDate();
-                return agendamentoDate.getTime() === dateTime.getTime();
+            // Fetch occupied times for the selected date
+            const q = query(
+                collection(db, 'agendamentos'),
+                where('dataAgendamento', '>=', startOfDay),
+                where('dataAgendamento', '<=', endOfDay)
+            );
+            const querySnapshot = await getDocs(q);
+            const occupiedTimes = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return format(data.dataAgendamento.toDate(), 'HH:mm');
             });
 
-            return { time, isOccupied };
-        });
+            // Generate all time slots
+            const allSlots = [
+                "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+                "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+                "16:00", "16:30", "17:00", "17:30"
+            ];
 
-        setHorarios(availableHorarios);
-        setIsLoadingHorarios(false);
-    }, [db, editingAgendamentoId]);
+            // Mark occupied slots
+            const availableSlots = allSlots.map(time => ({
+                time,
+                isOccupied: occupiedTimes.includes(time)
+            }));
 
-    const handleEdit = (agendamento) => {
-        if (editingAgendamentoId === agendamento.id) {
-            setSelectedAgendamento(null);
-            setEditingAgendamentoId(null);
-            setNome('');
-            setDataAgendamento('');
-            setHorario('');
-            setSelectedDate(null);
-        } else {
-            setSelectedAgendamento(agendamento);
-            setEditingAgendamentoId(agendamento.id);
-            setNome(agendamento.nome);
-            setDataAgendamento(format(agendamento.dataAgendamento.toDate(), 'yyyy-MM-dd'));
-            setHorario(format(agendamento.dataAgendamento.toDate(), 'HH:mm'));
-            setSelectedDate(agendamento.dataAgendamento.toDate());
-            setCurrentMonth(agendamento.dataAgendamento.toDate());
-            generateHorarios(agendamento.dataAgendamento.toDate());
-
-            setTimeout(() => {
-                if (editFormRef.current) {
-                    editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            }, 100);
+            setHorarios(availableSlots);
+            setScheduledTimes(occupiedTimes);
+        } catch (error) {
+            console.error('Error generating horarios:', error);
+        } finally {
+            setIsLoadingHorarios(false);
         }
+    }, [db]);
+
+    const handleEdit = (agendamento) => {   
+        setSelectedAgendamento(agendamento);
+        setNome(agendamento.nome);
+        
+        const date = agendamento.dataAgendamento.toDate();
+        setDataAgendamento(format(date, 'yyyy-MM-dd'));
+        setFormattedDate(format(date, 'dd/MM/yyyy', { locale: ptBR }));
+        setSelectedDate(date);
+        
+        setHorario(format(date, 'HH:mm'));
+
+        // Generate horarios for the selected date
+        generateHorarios(date);
+
+        // Scroll to the edit form
+        setTimeout(() => {
+            if (editFormRef.current) {
+                editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
     };
 
     const handleDateSelect = (date) => {
         setSelectedDate(date);
+        const formattedDate = format(date, 'dd/MM/yyyy', { locale: ptBR });
+        setFormattedDate(formattedDate);
         setDataAgendamento(format(date, 'yyyy-MM-dd'));
-        setShowDateModal(false);
-        setShowTimeModal(true);
         generateHorarios(date);
+        setShowDateModal(false);
+        setShowTimeModal(true);  // Open TimeModal after date selection
     };
 
     const handleTimeSelect = (time) => {
@@ -229,6 +231,10 @@ function Agendamentos() {
             await handleUpdate();
         }
         setIsConfirmModalOpen(false);
+        setSelectedAgendamento(null);
+        setNome('');
+        setDataAgendamento('');
+        setHorario('');
     };
 
     const handleUpdate = async () => {
@@ -238,10 +244,6 @@ function Agendamentos() {
                 nome: updatedAgendamento.nome,
                 dataAgendamento: updatedAgendamento.dataAgendamento
             });
-            setSelectedAgendamento(null);
-            setNome('');
-            setDataAgendamento('');
-            setHorario('');
             setSuccessMessage('Seu agendamento foi atualizado com sucesso!');
             setIsSuccessModalOpen(true);
             await fetchAgendamentos(userEmail);
@@ -420,7 +422,7 @@ function Agendamentos() {
                                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 <FaCalendarAlt className="inline-block mr-2" />
-                                {dataAgendamento ? format(new Date(dataAgendamento), 'dd/MM/yyyy') : 'Selecionar Data'}
+                                {formattedDate || 'Selecionar Data'}
                             </button>
                             <button
                                 type="button"
@@ -502,11 +504,8 @@ function Agendamentos() {
             <DateModal
                 showModal={showDateModal}
                 setShowModal={setShowDateModal}
-                currentMonth={currentMonth}
-                setCurrentMonth={setCurrentMonth}
-                selectedDate={selectedDate}
                 handleDateSelect={handleDateSelect}
-                generateCalendarDays={generateCalendarDays}
+                initialDate={selectedDate}
             />
 
             <TimeModal
@@ -517,6 +516,7 @@ function Agendamentos() {
                 horarios={horarios}
                 scheduledTimes={scheduledTimes}
                 isLoadingHorarios={isLoadingHorarios}
+                currentSelectedTime={horario}
             />
 
             <ConfirmationModal

@@ -29,6 +29,7 @@ function Cadastro() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
     const [role, setRole] = useState(null);
+    const [data, setData] = useState('');
     const [horarios, setHorarios] = useState([]);
     const [showDateModal, setShowDateModal] = useState(false);
     const [showTimeModal, setShowTimeModal] = useState(false);
@@ -37,6 +38,7 @@ function Cadastro() {
     const [scheduledTimes, setScheduledTimes] = useState([]);
     const [isLoadingHorarios, setIsLoadingHorarios] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [formattedDate, setFormattedDate] = useState('');
 
     const servicoPrecosMap = {
         corte_cabelo: 'R$ 35,00',
@@ -111,10 +113,12 @@ function Cadastro() {
 
     const handleDateSelect = (date) => {
         setSelectedDate(date);
-        setFormData(prev => ({ ...prev, data: format(date, 'yyyy-MM-dd') }));
-        setShowDateModal(false);
-        setShowTimeModal(true);
+        const formattedDate = format(date, 'dd/MM/yyyy', { locale: ptBR });
+        setFormattedDate(formattedDate);
+        setData(format(date, 'yyyy-MM-dd'));
         generateHorarios(date);
+        setShowDateModal(false);  // Fechar o modal de data
+        setShowTimeModal(true);   // Abrir o modal de horário
     };
 
     const handleTimeSelect = (time) => {
@@ -314,13 +318,13 @@ function Cadastro() {
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105"
                         >
                             <FaCalendarAlt className="inline-block mr-2" />
-                            {formData.data ? format(new Date(formData.data), 'dd/MM/yyyy') : 'Selecionar Data'}
+                            {formattedDate || 'Selecionar Data'}
                         </button>
                         <button
                             type="button"
-                            onClick={() => formData.data && setShowTimeModal(true)}
-                            className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105 ${!formData.data ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={!formData.data}
+                            onClick={() => data && setShowTimeModal(true)}
+                            className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out transform hover:scale-105 ${!data ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={!data}
                         >
                             <FaClock className="inline-block mr-2" />
                             {formData.horario || 'Selecionar Horário'}
@@ -371,11 +375,7 @@ function Cadastro() {
             <DateModal
                 showModal={showDateModal}
                 setShowModal={setShowDateModal}
-                currentMonth={currentMonth}
-                setCurrentMonth={setCurrentMonth}
-                selectedDate={selectedDate}
                 handleDateSelect={handleDateSelect}
-                generateCalendarDays={generateCalendarDays}
             />
 
             <TimeModal

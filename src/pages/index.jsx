@@ -8,9 +8,8 @@ import { doc, getDoc } from 'firebase/firestore';
 import { FaCalendarPlus, FaListAlt, FaCut } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import Footer from '../components/Footer';
-
-
-const fetcher = (...args) => fetch(...args).then(res => res.json());
+import UnauthenticatedHeader from '../components/UnauthenticatedHeader';
+import UserHeader from '../components/UserHeader';
 
 const Home = () => {
   const [loading, setLoading] = useState(true);
@@ -28,14 +27,12 @@ const Home = () => {
             setUser({ ...authUser, ...userData });
           } else {
             console.error("User document does not exist");
-            router.push('/login');
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
-          router.push('/login');
         }
       } else {
-        router.push('/login');
+        setUser(null);
       }
       setLoading(false);
     });
@@ -48,26 +45,17 @@ const Home = () => {
     };
 
     updateGreeting();
-    const intervalId = setInterval(updateGreeting, 60000); // Update greeting every minute
+    const intervalId = setInterval(updateGreeting, 60000);
 
     return () => {
       unsubscribe();
       clearInterval(intervalId);
     };
-  }, [router]);
+  }, []);
 
   if (loading) {
     return <LoadingSpinner />;
   }
-
-  if (!user) {
-    return null;
-  }
-
-  const buttonVariants = {
-    hover: { scale: 1.05, transition: { duration: 0.2 } },
-    tap: { scale: 0.95 }
-  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -94,6 +82,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900">
+      {user ? <UserHeader /> : <UnauthenticatedHeader />}
       <div className="flex flex-col min-h-screen w-full text-white pt-16">
         <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-6">
           <motion.div
@@ -103,7 +92,7 @@ const Home = () => {
             className="text-center mb-8"
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-blue-300">
-              {greeting}, {user?.username || 'Cliente'}!
+              {greeting}, {user?.username || 'Visitante'}!
             </h2>
             <p className="text-lg sm:text-xl text-blue-200 mb-8">
               Bem-vindo à nossa Barbearia! O que você gostaria de fazer hoje?
@@ -123,19 +112,17 @@ const Home = () => {
               </Link>
             </motion.div>
             <motion.div variants={itemVariants}>
-              <Link href="/user/cadastro" className="flex flex-col items-center justify-center px-6 py-8 bg-blue-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-blue-700 transition-colors w-full h-full group">
+              <Link href={user ? "/user/cadastro" : "/login"} className="flex flex-col items-center justify-center px-6 py-8 bg-blue-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-blue-700 transition-colors w-full h-full group">
                 <FaCalendarPlus className="text-4xl mb-4 group-hover:scale-110 transition-transform" />
                 <span className="text-center group-hover:underline">Agende Seu Corte</span>
               </Link>
             </motion.div>
-
             <motion.div variants={itemVariants}>
-              <Link href="/user/agendamentos" className="flex flex-col items-center justify-center px-6 py-8 bg-green-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-green-700 transition-colors w-full h-full group">
+              <Link href={user ? "/user/agendamentos" : "/login"} className="flex flex-col items-center justify-center px-6 py-8 bg-green-600 text-white rounded-lg text-lg font-semibold shadow-lg hover:bg-green-700 transition-colors w-full h-full group">
                 <FaListAlt className="text-4xl mb-4 group-hover:scale-110 transition-transform" />
                 <span className="text-center group-hover:underline">Consultar Agendamentos</span>
               </Link>
             </motion.div>
-
           </motion.div>
         </main>
         <Footer />

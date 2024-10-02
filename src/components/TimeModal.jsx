@@ -10,7 +10,8 @@ function TimeModal({
     handleTimeSelect,
     horarios,
     scheduledTimes,
-    isLoadingHorarios
+    isLoadingHorarios,
+    currentSelectedTime
 }) {
     const handleOverlayClick = (e) => {
         if (e.target === e.currentTarget) {
@@ -68,6 +69,7 @@ function TimeModal({
                                         const isPastTime = isPast(dateTime);
                                         const isScheduled = isTimeScheduled(selectedDate, time);
                                         const isDisabled = isOccupied || isPastTime || isScheduled;
+                                        const isSelected = time === currentSelectedTime;
                                         
                                         return (
                                             <button
@@ -77,7 +79,9 @@ function TimeModal({
                                                 className={`p-2 rounded ${
                                                     isDisabled
                                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                        : 'bg-blue-500 text-white hover:bg-blue-600'
+                                                        : isSelected
+                                                            ? 'bg-blue-700 text-white'
+                                                            : 'bg-blue-500 text-white hover:bg-blue-600'
                                                 }`}
                                             >
                                                 {time}
