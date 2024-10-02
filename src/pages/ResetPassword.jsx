@@ -5,32 +5,45 @@ import SuccessModal from '../components/SuccessModal';
 
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isCodeValid, setIsCodeValid] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [userRole, setUserRole] = useState('');
   const router = useRouter();
-  const { oobCode, apiKey } = router.query;
+  const { oobCode } = router.query;
 
   useEffect(() => {
-    const auth = getAuth();
-    if (oobCode) {
-      verifyPasswordResetCode(auth, oobCode)
-        .then(() => {
+    const verifyCode = async () => {
+      if (oobCode) {
+        const auth = getAuth();
+        try {
+          await verifyPasswordResetCode(auth, oobCode);
           setIsCodeValid(true);
-        })
-        .catch((error) => {
+        } catch (error) {
           console.error('Error verifying reset code:', error);
           setError('Código de redefinição de senha inválido ou expirado.');
           setIsCodeValid(false);
-        });
-    }
+        }
+      }
+    };
+
+    verifyCode();
   }, [oobCode]);
 
   const handleResetPassword = async () => {
     if (!newPassword) {
       setError('Por favor, insira uma nova senha.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('As senhas não coincidem.');
+      return;
+    }
+
+    if (!oobCode) {
+      setError('Código de redefinição de senha não encontrado.');
       return;
     }
 
@@ -65,6 +78,13 @@ const ResetPassword = () => {
               onChange={(e) => setNewPassword(e.target.value)}
               className="w-full p-3 border border-gray-600 rounded-md mb-4 bg-gray-700 text-white placeholder-gray-400"
             />
+            <input
+              type="password"
+              placeholder="Confirmar Nova Senha"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full p-3 border border-gray-600 rounded-md mb-4 bg-gray-700 text-white placeholder-gray-400"
+            />
             <button
               onClick={handleResetPassword}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-md transition duration-300 ease-in-out"
@@ -73,7 +93,7 @@ const ResetPassword = () => {
             </button>
           </>
         ) : (
-          <p className="text-red-400 text-center">
+          <p className="text-center">
             {error || 'Verificando código de redefinição de senha...'}
           </p>
         )}
