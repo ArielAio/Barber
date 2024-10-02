@@ -10,8 +10,6 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 
 // Importe as instâncias do Firebase
 import { auth, db } from '../lib/firebase';
-// Importe o componente Head
-import Head from 'next/head';
 
 export default function App({ Component, pageProps }: AppProps) {
   const [role, setRole] = useState<string | null>(null);
@@ -52,15 +50,6 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <div className="min-h-screen">
-      {/* Adicione o script do AdSense no <Head> */}
-      <Head>
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3720068054105503"
-          crossOrigin="anonymous"
-        ></script>
-      </Head>
-
       {!noHeaderRoutes.includes(router.pathname) && (
         role === 'admin' ? <AdminHeader /> : <UserHeader />
       )}
