@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAuth, confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/router';
 import SuccessModal from '../components/SuccessModal';
 
 const ResetPassword = () => {
@@ -9,32 +9,39 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState('');
   const [isCodeValid, setIsCodeValid] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [userRole, setUserRole] = useState('');
   const router = useRouter();
-  const { oobCode, apiKey } = router.query;
+  const [searchParams] = useSearchParams();
+  const oobCode = searchParams.get('oobCode');
 
   useEffect(() => {
     const auth = getAuth();
-    if (oobCode && apiKey) {
-      auth.useDeviceLanguage();
+    if (oobCode) {
       verifyPasswordResetCode(auth, oobCode)
         .then(() => {
           setIsCodeValid(true);
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('Error verifying reset code:', error);
           setError('Código de redefinição de senha inválido ou expirado.');
         });
+    } else {
+      setError('Código de redefinição de senha não encontrado na URL.');
     }
-  }, [oobCode, apiKey]);
+  }, [oobCode]);
 
   const handleResetPassword = async () => {
+    if (!newPassword) {
+      setError('Por favor, insira uma nova senha.');
+      return;
+    }
+
     const auth = getAuth();
     try {
       await confirmPasswordReset(auth, oobCode, newPassword);
       setSuccess('Senha redefinida com sucesso!');
       setShowModal(true);
-      // Remove the getUserRole logic since we're not using it anymore
     } catch (error) {
+      console.error('Error resetting password:', error);
       setError('Erro ao redefinir a senha. Tente novamente.');
     }
   };
@@ -67,7 +74,7 @@ const ResetPassword = () => {
             </button>
           </>
         ) : (
-          <p className="text-red-400 text-center">Código de redefinição de senha inválido ou expirado.</p>
+          <p className="text-red-400 text-center">Verificando código de redefinição de senha...</p>
         )}
       </div>
       <SuccessModal
