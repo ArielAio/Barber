@@ -56,12 +56,11 @@ function Agendamentos() {
         });
 
         clientesData = filterClientes(clientesData);
-
-        const groupedClientes = groupClientesByEmail(clientesData);
-
-        setClientesPendentes(groupedClientes);
+        const groupedByDateAndName = groupByDateAndName(clientesData);
+        setClientesPendentes(groupedByDateAndName);
         setLoading(false);
     }, [statusFilter, searchTerm, showPastAppointments, showFutureAppointments, db]);
+
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -166,28 +165,41 @@ function Agendamentos() {
             [key]: !prevState[key]
         }));
     };
-
-    const groupByDateAndEmail = (clientes) => {
+    const groupByDateAndName = (clientes) => {
+        // First, sort the clientes array by date
+        clientes.sort((a, b) => a.dataHoraUTC - b.dataHoraUTC);
+        
         return clientes.reduce((acc, cliente) => {
             const date = moment(cliente.dataHoraUTC).format('dddd, DD [de] MMMM');
-            const email = cliente.email;
             if (!acc[date]) {
                 acc[date] = {};
             }
-            if (!acc[date][email]) {
-                acc[date][email] = [];
+            if (!acc[date][cliente.nome]) {
+                acc[date][cliente.nome] = [];
             }
-            acc[date][email].push(cliente);
+            acc[date][cliente.nome].push(cliente);
             return acc;
         }, {});
     };
+    
 
-    const flattenedAppointments = Object.entries(groupByDateAndEmail(Object.values(clientesPendentes).flat()))
-        .flatMap(([date, clientesByEmail]) => 
-            Object.entries(clientesByEmail).map(([email, appointments]) => 
-                ({ date, email, appointments })
-            )
-        );
+
+    const flattenedAppointments = Object.entries(clientesPendentes)
+    // Sort the dates
+    .sort((a, b) => {
+        const dateA = moment(a[0], 'dddd, DD [de] MMMM');
+        const dateB = moment(b[0], 'dddd, DD [de] MMMM');
+        return dateA - dateB;
+    })
+    .map(([date, nameGroups]) => ({
+        date,
+        nameGroups: Object.entries(nameGroups).map(([name, appointments]) => ({
+            name,
+            // Sort appointments by time within each name group
+            appointments: appointments.sort((a, b) => a.dataHoraUTC - b.dataHoraUTC)
+        }))
+    }));
+
 
     const indexOfLastAppointment = currentPage * appointmentsPerPage;
     const indexOfFirstAppointment = indexOfLastAppointment - appointmentsPerPage;
@@ -231,19 +243,19 @@ function Agendamentos() {
             <button
                 key={index}
                 onClick={() => number !== '...' && paginate(number)}
-                className={`mx-1 px-3 py-1 rounded ${
-                    currentPage === number
+                className={`mx-1 px-3 py-1 rounded ${currentPage === number
                         ? 'bg-blue-600'
                         : number === '...'
-                        ? 'bg-gray-700 cursor-default'
-                        : 'bg-gray-700 hover:bg-gray-600'
-                } transition-colors duration-300`}
+                            ? 'bg-gray-700 cursor-default'
+                            : 'bg-gray-700 hover:bg-gray-600'
+                    } transition-colors duration-300`}
                 disabled={number === '...'}
             >
                 {number}
             </button>
         ));
     };
+
 
     if (role === null) {
         return <LoadingSpinner />;
@@ -291,8 +303,8 @@ function Agendamentos() {
                                             key={status}
                                             onClick={() => setStatusFilter(status)}
                                             className={`px-4 py-2 rounded-full ${statusFilter === status
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                                 } transition-colors duration-300`}
                                         >
                                             {status}
@@ -309,8 +321,8 @@ function Agendamentos() {
                                             if (showFutureAppointments) setShowFutureAppointments(false);
                                         }}
                                         className={`px-4 py-2 rounded-full ${showPastAppointments
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                             } transition-colors duration-300`}
                                     >
                                         {showPastAppointments ? 'Mostrar Passados' : 'Mostrar Passados'}
@@ -321,8 +333,8 @@ function Agendamentos() {
                                             if (showPastAppointments) setShowPastAppointments(false);
                                         }}
                                         className={`px-4 py-2 rounded-full ${showFutureAppointments
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                             } transition-colors duration-300`}
                                     >
                                         {showFutureAppointments ? 'Mostrar Futuros' : 'Mostrar Futuros'}
@@ -339,56 +351,55 @@ function Agendamentos() {
                     <p className="text-center text-gray-400">Nenhum agendamento encontrado.</p>
                 ) : (
                     <div className="space-y-6">
-                        {currentAppointments.map(({ date, email, appointments }) => (
-                            <div key={`${date}-${email}`} className="bg-gray-800 p-4 rounded-lg shadow-lg">
-                                <h2 className="text-lg font-semibold mb-2 text-gray-300">{date}</h2>
-                                <div className="bg-gray-700 p-4 rounded-lg">
-                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                                        <div className="flex flex-col items-start">
-                                            <h3 className="text-xl font-semibold">{appointments[0].nome}</h3>
-                                            <p className="text-gray-400">{email}</p>
-                                        </div>
-                                    </div>
-                                    <div className="mt-4 space-y-4">
-                                        {appointments.map((appointment) => (
-                                            <div key={appointment.id} className="bg-gray-600 p-4 rounded-lg">
-                                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                                                    <div className="flex flex-col items-start">
-                                                        <p className="text-gray-400">{appointment.horaAgendamento}</p>
-                                                        <p className="text-gray-400">Serviço: {getServiceName(appointment.servico)}</p>
-                                                        <p className="text-gray-400">Preço: {formatPreco(appointment.preco)}</p>
-                                                        <p className="text-gray-400">Status: {appointment.statusPagamento}</p>
+                        {currentAppointments.map(({ date, nameGroups }) => (
+                            <div key={date} className="bg-gray-800 p-4 rounded-lg shadow-lg">
+                                <h2 className="text-lg font-semibold mb-4 text-gray-300">{date}</h2>
+                                <div className="space-y-6">
+                                    {nameGroups.map(({ name, appointments }) => (
+                                        <div key={`${date}-${name}`} className="bg-gray-700 p-4 rounded-lg">
+                                            <h3 className="text-xl font-semibold mb-3">{name}</h3>
+                                            <div className="space-y-4">
+                                                {appointments.map((appointment) => (
+                                                    <div key={appointment.id} className="bg-gray-600 p-4 rounded-lg">
+                                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                                                            <div className="flex flex-col items-start">
+                                                            <p className="text-gray-400">{appointment.email || "Nenhum email vinculado"}</p>
+                                                            <p className="text-gray-400">{appointment.horaAgendamento}</p>
+                                                                <p className="text-gray-400">Serviço: {getServiceName(appointment.servico)}</p>
+                                                                <p className="text-gray-400">Preço: {formatPreco(appointment.preco)}</p>
+                                                                <p className="text-gray-400">Status: {appointment.statusPagamento}</p>
+                                                            </div>
+                                                            <div className="flex space-x-2 items-center mt-2 md:mt-0">
+                                                                {appointment.isConcluido && (
+                                                                    <span className="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
+                                                                        Concluído
+                                                                    </span>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handleStatusChange(appointment, appointment.statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
+                                                                    className={`p-2 rounded-full ${appointment.statusPagamento === 'Pago' ? 'bg-green-500' : 'bg-yellow-500'} hover:opacity-80 transition-opacity duration-300`}
+                                                                >
+                                                                    {appointment.statusPagamento === 'Pago' ? <MdCheck size={20} /> : <MdCancel size={20} />}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleEdit(appointment)}
+                                                                    className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
+                                                                >
+                                                                    <MdEdit size={20} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(appointment)}
+                                                                    className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
+                                                                >
+                                                                    <MdDelete size={20} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex space-x-2 items-center mt-2 md:mt-0">
-                                                        {appointment.isConcluido && (
-                                                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
-                                                                Concluído
-                                                            </span>
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleStatusChange(appointment, appointment.statusPagamento === 'Pago' ? 'Pendente' : 'Pago')}
-                                                            className={`p-2 rounded-full ${appointment.statusPagamento === 'Pago' ? 'bg-green-500' : 'bg-yellow-500'
-                                                                } hover:opacity-80 transition-opacity duration-300`}
-                                                        >
-                                                            {appointment.statusPagamento === 'Pago' ? <MdCheck size={20} /> : <MdCancel size={20} />}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleEdit(appointment)}
-                                                            className="p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors duration-300"
-                                                        >
-                                                            <MdEdit size={20} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(appointment)}
-                                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600 transition-colors duration-300"
-                                                        >
-                                                            <MdDelete size={20} />
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}

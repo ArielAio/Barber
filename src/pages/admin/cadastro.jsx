@@ -177,31 +177,48 @@ function Cadastro() {
 
     const handleSubmit = async (event) => {
         event.preventDefault();
-
-        if (!formData.nome || !formData.data || !formData.horario || !formData.servico) {
+        
+        if (!formData.nome || !formattedDate || !formData.horario || !formData.servico) {
+            const camposFaltantes = [];
+        
+            // Verifica cada campo e adiciona o nome à array se estiver vazio
+            if (!formData.nome) camposFaltantes.push('Nome');
+            if (!formattedDate) camposFaltantes.push('Data');
+            if (!formData.horario) camposFaltantes.push('Horário');
+            if (!formData.servico) camposFaltantes.push('Serviço');
+        
+            // Exibe no console os campos faltantes
+            console.error('Campos obrigatórios faltando:', camposFaltantes.join(', '));
+            console.log("data: ", formattedDate);
+        
+            // Define a mensagem de erro para o usuário
             setError('Preencha todos os campos obrigatórios!');
             return;
         }
-
+    
         setLoading(true);
         setError('');
-
+    
         try {
-            const [year, month, day] = formData.data.split('-');
+            // Obtém o dia, mês e ano da data formatada
+            const [day, month, year] = formattedDate.split('/');
             const [hour, minute] = formData.horario.split(':');
             const timeZone = 'America/Sao_Paulo';
+    
+            // Cria a data final formatada
             const dataAgendamento = moment.tz(`${year}-${month}-${day} ${hour}:${minute}`, timeZone).toDate();
-
+    
             const isTimeSlotTaken = scheduledTimes.some(time =>
                 isEqual(parseISO(time), dataAgendamento)
             );
-
+    
             if (isTimeSlotTaken) {
                 setError('Este horário já está agendado. Por favor, escolha outro horário.');
                 setLoading(false);
                 return;
             }
-
+    
+            // Dados a serem salvos no banco
             const agendamentoData = {
                 nome: formData.nome,
                 dataAgendamento: Timestamp.fromDate(dataAgendamento),
@@ -210,13 +227,15 @@ function Cadastro() {
                 servico: formData.servico,
                 preco: formData.preco,
             };
-
+    
+            // Adiciona o email se ele estiver presente no formulário
             if (formData.email) {
                 agendamentoData.email = formData.email;
             }
-
+    
+            // Salva o documento no Firestore
             await addDoc(collection(db, "agendamentos"), agendamentoData);
-
+    
             setShowSuccessModal(true);
             setFormData({
                 nome: '',
